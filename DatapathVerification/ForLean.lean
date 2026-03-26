@@ -1,3 +1,5 @@
+import Std.Tactic.BVDecide
+
 theorem BitVec.eq_cons_truncate (a b c : BitVec (n + 1)) :
     a ^^^ b ^^^ c = BitVec.cons (a.msb ^^ b.msb ^^ c.msb)
                                 (a.truncate n ^^^ b.truncate n ^^^ c.truncate n) := by
@@ -13,9 +15,10 @@ theorem BitVec.toNat_eq_div_toNat (a : BitVec w) (h: 1 ≤ w) : a[w-1].toNat = a
       refine Nat.div_lt_of_lt_mul ?_
       have h1 : 2 ^ (w - 1) * 2 = 2 ^ w := by refine Nat.two_pow_pred_mul_two ?_; omega
       simp [h1]; omega
+  simp_all only [Nat.mod_succ_eq_iff_lt, Nat.succ_eq_add_one, Nat.reduceAdd]
   by_cases h : a.toNat / 2 ^ (w - 1) % 2 == 1
-  · simp only [h, cond_true]
-    simp_all only [beq_iff_eq]
+  · simp [h]
+    bv_decide
   · simp_all only [beq_iff_eq, Nat.mod_succ_eq_iff_lt, Nat.succ_eq_add_one, Nat.reduceAdd]
     have : a.toNat / 2 ^ (w - 1) = 0 := by
       have h_nat : 0 ≤ a.toNat / 2 ^ (w - 1) := Nat.zero_le _
