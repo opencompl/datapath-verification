@@ -25,7 +25,7 @@ def carrySave : (w : ℕ) → BitVec w → BitVec w → BitVec w → CSAResult w
     let cMsb := c[n]
     let x := aMsb ^^ bMsb
     let sum := x ^^ cMsb
-    let carry := (aMsb && bMsb) || (aMsb && cMsb) || (bMsb && cMsb)
+    let carry := (aMsb && bMsb) || (cMsb && x)
     ⟨BitVec.cons sum S, BitVec.cons carry T⟩
 
 #eval carrySave 32 5 7 3
