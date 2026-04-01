@@ -73,6 +73,7 @@ def chain {w n : Nat} (v : Vector (BitVec w) n) : CSAResult w :=
   | 0 => ⟨0, 0⟩
   | 1 => ⟨v[0], 0⟩
   | 2 => carrySave w v[0] v[1] 0
+  | 3 => carrySave w v[0] v[1] v[2]
   | n + 1 =>
     let ⟨sum, carry⟩ := chain (v.take n) -- takes the first n elements of the vector.
     let ⟨s, t⟩ := carrySave w sum (carry <<< 1) (v.back) -- the chained carry is shifted left by 1 to align with the next input.
