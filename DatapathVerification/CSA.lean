@@ -66,4 +66,26 @@ theorem mul4_correct (a b : BitVec 4) : a * b = mul4 a b := by
   simp only [mul4, carrySave]
   bv_decide
 
+-- N:2 compressor tree using carry-save adders.
+def csaChain (a : Fin (n + 2) → BitVec w)
+    : (i : ℕ) → (i ≤ n) → BitVec w × BitVec w
+  | 0, _ => (a ⟨0, by omega⟩, a ⟨1, by omega⟩)
+  | i + 1, h =>
+    let (sum_prev, carry_prev) := csaChain a i (by omega)
+    let ⟨s, t⟩ := carrySave w sum_prev carry_prev (a ⟨i + 2, by omega⟩)
+    (s, t <<< 1)
+
+-- Sum inputs
+def finSum (a : Fin n → BitVec w) : BitVec w :=
+  Finset.univ.sum a
+
+theorem csaChain_correct (a : Fin (n + 2) → BitVec w)
+    (h : n > 0) :
+    let (carry, sum) := csaChain a n (le_refl n)
+    carry + sum = finSum a := by
+  induction n with
+  | zero => omega
+  | succ k ih =>
+    sorry
+
 end CSA
