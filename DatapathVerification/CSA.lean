@@ -98,7 +98,7 @@ info: { s := 0x00a#10, t := 0x005#10 }
 def list_sum {w : Nat} (v : List (BitVec w)) : BitVec w :=
   match v with
   | [] => 0
-  | a :: rest => list_sum rest + a
+  | a :: rest => (list_sum rest) + a
 
 /--
 info: 20#10
@@ -129,9 +129,7 @@ theorem chain_correct {w : Nat} (v : List (BitVec w)) :
       bv_automata_classic
     | a :: b :: c :: rest' =>
       simp only [chain, list_sum, carrySave] at ih ⊢
-      rw [show list_sum rest' + c + b + a
-            = (chain (a :: b :: c :: rest')).s
-              + (chain (a :: b :: c :: rest')).t <<< 1 from ih]
+      simp only [ih]
       clear ih hrest
       bv_automata_classic
 
