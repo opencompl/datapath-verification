@@ -14,7 +14,6 @@ structure CSAResult (w : ℕ) where
 -- The carry-save adder splits the sum into a partial sum `s` and
 -- carry bits `t`, such that the original sum is recovered by
 -- adding `s` to the carries shifted left by 1 (i.e., t * 2).
-@[bv_normalize]
 def carrySave (w : ℕ) (a b c : BitVec w) : CSAResult w :=
   let s := a ^^^ b ^^^ c
   let t := (a &&& b ||| a &&& c ||| b &&& c)
@@ -69,7 +68,6 @@ theorem mul4_correct (a b : BitVec 4) : a * b = mul4 a b := by
 
 -- N:2 compressor implementation.
 -- Takes a vector of n bit-vectors and reduces them to 2 bit-vectors (sum and carry) using a tree of carry-save adders.
-@[bv_normalize]
 def chain {w : Nat} (v : List (BitVec w)) : CSAResult w :=
   match v with
   | [] => ⟨0, 0⟩
