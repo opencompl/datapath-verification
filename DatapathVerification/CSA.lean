@@ -19,6 +19,10 @@ def carrySave (w : ℕ) (a b c : BitVec w) : CSAResult w :=
   let t := (a &&& b ||| a &&& c ||| b &&& c)
   ⟨s, t⟩
 
+/--
+info: { s := 0x5#4, t := 0x5#4 }
+-/
+#guard_msgs in
 #eval carrySave 4 5 5 5
 
 -- a + b + c = CSA(a, b, c)
@@ -48,6 +52,10 @@ def mul4 (a b : BitVec 4) : BitVec 4 :=
   let ⟨s2, t2⟩ := carrySave 4 s1 (t1 <<< 1) p3
   s2 + (t2 <<< 1)
 
+/--
+info: 12#4
+-/
+#guard_msgs in
 #eval mul4 4 3
 
 -- a*b = (a[0] * b) + (2 * a[1] * b) + (4 * a[2] * b) + (8 * a[3] * b)
@@ -67,7 +75,7 @@ theorem mul4_correct (a b : BitVec 4) : a * b = mul4 a b := by
   bv_decide
 
 -- N:2 compressor implementation.
--- Takes a vector of n bit-vectors and reduces them to 2 bit-vectors (sum and carry) using a tree of carry-save adders.
+-- Takes a list of n Bitvectors and reduces them to 2 Bitvectors (sum and carry) using a tree of carry-save adders.
 def chain {w : Nat} (v : List (BitVec w)) : CSAResult w :=
   match v with
   | [] => ⟨0, 0⟩
@@ -80,19 +88,27 @@ def chain {w : Nat} (v : List (BitVec w)) : CSAResult w :=
     let ⟨s, t⟩ := carrySave w sum (carry <<< 1) a -- the chained carry is shifted left by 1 to align with the next input.
     ⟨s, t⟩ -- return the carry without shifting, the next level handles it.
 
+/--
+info: { s := 0x00a#10, t := 0x005#10 }
+-/
+#guard_msgs in
 #eval chain (v := [5#10, 2#10, 3#10, 7#10, 3#10])
 
--- Sum all elements of a vector of BitVectors.
+-- Sum all elements of a list of Bitvectors.
 def list_sum {w : Nat} (v : List (BitVec w)) : BitVec w :=
   match v with
   | [] => 0
   | a :: rest => list_sum rest + a
 
+/--
+info: 20#10
+-/
+#guard_msgs in
 #eval list_sum (v := [5#10, 2#10, 3#10, 7#10, 3#10])
 
 /-- Main correctness theorem for N:2 compressor chain.
-For a vector of BitVectors, the compressor chain reduces it to a pair (s,t)
-such that the sum of all elements in the vector equals s + t <<< 1. -/
+For a list of Bitvectors, the compressor chain reduces it to a pair (s,t)
+such that the sum of all elements in the list equals s + t <<< 1. -/
 theorem chain_correct {w : Nat} (v : List (BitVec w)) :
     let ⟨s, t⟩ := chain v
     list_sum v = s + t <<< 1 := by
