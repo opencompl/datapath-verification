@@ -138,26 +138,23 @@ theorem chain_correct {w : Nat} (v : List (BitVec w)) :
 -- Recursive partial-products: produces `[p_{n-1}, p_{n-2}, ..., p_0]`
 -- where `p_i = (y[i] ? x : 0) <<< i`.
 @[bv_normalize]
-def partialProducts' {w : Nat} (x y : BitVec w) : Nat → List (BitVec w)
+def partialProducts {w : Nat} (x y : BitVec w) (n : Nat) : List (BitVec w) :=
+  match n with
   | 0 => []
   | n + 1 =>
     let cur := if y.getLsbD n then (x <<< n) else 0
-    cur :: partialProducts' x y n
-
-@[bv_normalize]
-def partialProducts {w : Nat} (x y : BitVec w) : List (BitVec w) :=
-  partialProducts' x y w
+    cur :: partialProducts x y n
 
 /--
 info: [0#8, 0#8, 0#8, 0#8, 0#8, 0#8, 102#8, 51#8]
 -/
 #guard_msgs in
-#eval partialProducts (51#8) (3#8)
+#eval partialProducts (51#8) (3#8) 8
 
 -- Multiplication circuit: build partial products, compress them with the chain of carry-save adders, and sum the results.
 @[bv_normalize]
 def mulChain {w : Nat} (a b : BitVec w) : BitVec w :=
-  let ⟨s, t⟩ := chain (partialProducts a b)
+  let ⟨s, t⟩ := chain (partialProducts a b w)
   s + t <<< 1
 
 /--
@@ -165,5 +162,9 @@ info: 153#8
 -/
 #guard_msgs in
 #eval mulChain (51#8) (3#8)
+
+set_option trace.profiler true in
+theorem mul_comm' (x y : BitVec 9) : mulChain x y = mulChain y x  := by
+  bv_decide
 
 end CSA
