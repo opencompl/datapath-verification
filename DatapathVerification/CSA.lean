@@ -136,8 +136,13 @@ theorem chain_correct {w : Nat} (v : List (BitVec w)) :
       clear ih hrest
       bv_automata_classic
 
+/-!
+  N:2 compressor implementation with a more optimized structure. Instead of chaining the carry-save adders in a linear fashion,
+  we compress the input list in a more balanced way. First we compress the first three elements, then we create a new list with the sum and carry from the first compression, and the remaining elements.
+  We then reverse this new list and apply the chain_opt function recursively. This enables applying the carry chain adders to the front and back of the list in parallel.
+-/
 @[bv_normalize]
-def chain_reverse {w : Nat} (v : List (BitVec w)) : CSAResult w :=
+def chain_opt {w : Nat} (v : List (BitVec w)) : CSAResult w :=
   match v with
   | [] => ⟨0, 0⟩
   | [a] => ⟨a, 0⟩
@@ -147,67 +152,38 @@ def chain_reverse {w : Nat} (v : List (BitVec w)) : CSAResult w :=
     let ⟨sum, carry⟩ := carrySave w a b c
     let new_list := sum :: (carry <<< 1) :: rest
     let back := new_list.reverse
-    let ⟨sum, carry⟩ := chain_reverse back
+    let ⟨sum, carry⟩ := chain_opt back
     ⟨sum, carry⟩
   termination_by v.length
   decreasing_by
     simp
 
-#eval chain_reverse (v := [5#10, 2#10, 3#10, 7#10, 3#10])
+#eval chain_opt (v := [5#10, 2#10, 3#10, 7#10, 3#10])
 
-theorem chain_reverse_correct {w : Nat} (v : List (BitVec w)) :
-    let ⟨s, t⟩ := chain_reverse v
+theorem chain_opt_correct {w : Nat} (v : List (BitVec w)) :
+    let ⟨s, t⟩ := chain_opt v
     list_sum v = s + t <<< 1 := by
   induction v with
   | nil =>
-    simp [chain_reverse, list_sum]
+    simp [chain_opt, list_sum]
   | cons hd rest ih =>
     match hrest : rest with
     | [] =>
-      simp [chain_reverse, list_sum]
+      simp [chain_opt, list_sum]
     | [a] =>
-      simp only [chain_reverse, list_sum, carrySave]
+      simp only [chain_opt, list_sum, carrySave]
       clear ih hrest rest
       bv_automata_classic
     | [a, b] =>
-      simp only [chain_reverse, list_sum, carrySave]
+      simp only [chain_opt, list_sum, carrySave]
       clear ih hrest rest
       bv_automata_classic
     | a :: b :: c :: rest' =>
-      simp only [chain_reverse, list_sum, carrySave] at ih ⊢
+      simp only [chain_opt, list_sum, carrySave] at ih ⊢
       simp
-      unfold chain_reverse at ih ⊢
+      unfold chain_opt at ih ⊢
       clear ih hrest
       sorry
       -- bv_automata_classic
-
--- Recursive partial-products: produces `[p_{n-1}, p_{n-2}, ..., p_0]`
--- where `p_i = (y[i] ? x : 0) <<< i`. Order is reversed vs. index.
-@[bv_normalize]
-def partialProducts' {w : Nat} (x y : BitVec w) : Nat → List (BitVec w)
-  | 0 => []
-  | n + 1 =>
-    let cur := if y.getLsbD n then (x <<< n) else 0
-    cur :: partialProducts' x y n
-
-@[bv_normalize]
-def partialProducts {w : Nat} (x y : BitVec w) : List (BitVec w) :=
-  partialProducts' x y w
-
-#eval partialProducts (5#4) (3#4)
-
--- Multiplication circuit: build partial products, then sum them via the CSA chain.
-@[bv_normalize]
-def mulChain {w : Nat} (a b : BitVec w) : BitVec w :=
-  let ⟨s, t⟩ := chain_reverse (partialProducts a b)
-  s + t <<< 1
-
-#eval mulChain (5#4) (3#4)
-
-set_option trace.profiler true in
-theorem mul_comm' (x y : BitVec 8) : mulChain x y = mulChain y x  := by
-  simp [mulChain, partialProducts, partialProducts']
-  repeat (unfold chain_reverse; simp [List.reverse, List.reverseAux])
-  bv_decide
 
 end CSA
