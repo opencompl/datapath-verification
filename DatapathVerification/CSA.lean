@@ -14,6 +14,7 @@ structure CSAResult (w : ℕ) where
 -- The carry-save adder splits the sum into a partial sum `s` and
 -- carry bits `t`, such that the original sum is recovered by
 -- adding `s` to the carries shifted left by 1 (i.e., t * 2).
+@[bv_normalize]
 def carrySave (w : ℕ) (a b c : BitVec w) : CSAResult w :=
   let s := a ^^^ b ^^^ c
   let t := (a &&& b ||| a &&& c ||| b &&& c)
@@ -76,6 +77,7 @@ theorem mul4_correct (a b : BitVec 4) : a * b = mul4 a b := by
 
 -- N:2 compressor implementation.
 -- Takes a list of n Bitvectors and reduces them to 2 Bitvectors (sum and carry) using a tree of carry-save adders.
+@[bv_normalize]
 def chain {w : Nat} (v : List (BitVec w)) : CSAResult w :=
   match v with
   | [] => ⟨0, 0⟩
@@ -132,5 +134,36 @@ theorem chain_correct {w : Nat} (v : List (BitVec w)) :
       simp only [ih]
       clear ih hrest
       bv_automata_classic
+
+-- Recursive partial-products: produces `[p_{n-1}, p_{n-2}, ..., p_0]`
+-- where `p_i = (y[i] ? x : 0) <<< i`.
+@[bv_normalize]
+def partialProducts' {w : Nat} (x y : BitVec w) : Nat → List (BitVec w)
+  | 0 => []
+  | n + 1 =>
+    let cur := if y.getLsbD n then (x <<< n) else 0
+    cur :: partialProducts' x y n
+
+@[bv_normalize]
+def partialProducts {w : Nat} (x y : BitVec w) : List (BitVec w) :=
+  partialProducts' x y w
+
+/--
+info: [0#8, 0#8, 0#8, 0#8, 0#8, 0#8, 102#8, 51#8]
+-/
+#guard_msgs in
+#eval partialProducts (51#8) (3#8)
+
+-- Multiplication circuit: build partial products, compress them with the chain of carry-save adders, and sum the results.
+@[bv_normalize]
+def mulChain {w : Nat} (a b : BitVec w) : BitVec w :=
+  let ⟨s, t⟩ := chain (partialProducts a b)
+  s + t <<< 1
+
+/--
+info: 153#8
+-/
+#guard_msgs in
+#eval mulChain (51#8) (3#8)
 
 end CSA
