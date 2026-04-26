@@ -8,7 +8,27 @@ import DatapathVerification.CSA
 namespace CSA
 
 set_option trace.profiler true in
-theorem mul_comm' (x y : BitVec 9) : mulChain x y = mulChain y x  := by
+theorem mul_comm' (x y : BitVec 4) : mulChain x y = mulChain y x  := by
+  bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm'' (x y : BitVec 5) : mulChain x y = mulChain y x  := by
+  bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm''' (x y : BitVec 6) : mulChain x y = mulChain y x  := by
+  bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm'''' (x y : BitVec 7) : mulChain x y = mulChain y x  := by
+  bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm''''' (x y : BitVec 8) : mulChain x y = mulChain y x  := by
+  bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm'''''' (x y : BitVec 9) : mulChain x y = mulChain y x  := by
   bv_decide
 
 end CSA
@@ -27,7 +47,27 @@ def mulRecRef (x y : BitVec w) (s : Nat) : BitVec w :=
     mulRecRef x y (w - 1)
 
 set_option trace.profiler true in
-theorem mul_comm' (x y : BitVec 9) : mulRef x y = mulRef y x  := by
+theorem mul_comm' (x y : BitVec 4) : mulRef x y = mulRef y x  := by
+    bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm'' (x y : BitVec 5) : mulRef x y = mulRef y x  := by
+    bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm''' (x y : BitVec 6) : mulRef x y = mulRef y x  := by
+    bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm'''' (x y : BitVec 7) : mulRef x y = mulRef y x  := by
+    bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm''''' (x y : BitVec 8) : mulRef x y = mulRef y x  := by
+    bv_decide
+
+set_option trace.profiler true in
+theorem mul_comm'''''' (x y : BitVec 9) : mulRef x y = mulRef y x  := by
     bv_decide
 
 end CSABlastMul
