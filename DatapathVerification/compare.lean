@@ -5,8 +5,10 @@ import DatapathVerification.CSA
   This file compares the performance of bv_decide in different multiplication circuits.
 -/
 
+-- Namespace for the multiplication implementations defined in CSA.lean
 namespace CSA
 
+--Multiplication implementation based on compression of partial products.
 set_option trace.profiler true in
 theorem mul_comm_4bit (x y : BitVec 4) : mulChain x y = mulChain y x  := by
   bv_decide
@@ -33,6 +35,9 @@ theorem mul_comm_9bit (x y : BitVec 9) : mulChain x y = mulChain y x  := by
 
 end CSA
 
+/-
+  Multiplication implementation used in the Bit Blaster of Lean 4.
+-/
 namespace CSABlastMul
 
 @[bv_normalize]
