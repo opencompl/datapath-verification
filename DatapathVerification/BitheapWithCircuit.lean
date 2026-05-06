@@ -86,18 +86,31 @@ def exampleHeapWithOneVariable : BitHeap :=
   let (h, idx) := h.addBit c 1
   h
 
-structure HalfAdderResult where
+structure AdderResult where
   heap : BitHeap
   sumIndex : Index
   carryIndex : Index
 
-def halfAdder (h : BitHeap) (i j : Index) (hij : i.column = j.column) : HalfAdderResult :=
+def halfAdder (h : BitHeap) (i j : Index) (hij : i.column = j.column) : AdderResult :=
   let bi := h.get i
   let bj := h.get j
   let h := h.removeBit i
   let h := h.removeBit j
   let sum := Circuit.binop .xor bi bj -- Circuit.atLeastTwo bi bj (Circuit.const false)
   let carry := Circuit.binop .and bi bj
+  let (h, sumIndex) := h.addBit sum i.column
+  let (h, carryIndex) := h.addBit carry (i.column + 1)
+  ⟨h, sumIndex, carryIndex⟩
+
+def fullAdder (h : BitHeap) (i j k: Index) (hij : i.column = j.column) (hik : i.column = k.column) : AdderResult :=
+  let bi := h.get i
+  let bj := h.get j
+  let bk := h.get k
+  let h := h.removeBit i
+  let h := h.removeBit j
+  let h := h.removeBit k
+  let sum := Circuit.binop .xor (Circuit.binop .xor bi bj) bk
+  let carry := Circuit.atLeastTwo bi bj bk
   let (h, sumIndex) := h.addBit sum i.column
   let (h, carryIndex) := h.addBit carry (i.column + 1)
   ⟨h, sumIndex, carryIndex⟩
