@@ -54,7 +54,7 @@ def evalColumn (col : List Circuit) (env : BitEnv) : Nat :=
 Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
 def BitHeap.eval (h : BitHeap) (env : BitEnv) : Int :=
-  (h.columns.zipIdx.map (fun (col, w) => w * evalColumn col env)).sum
+  (h.columns.zipIdx.map (fun (col, w) => (2 ^ w) * evalColumn col env)).sum
 
 /-
 An index into a bit-heap, to point at particular bits to create new operations.
@@ -122,7 +122,8 @@ theorem Circuit.const_false_eval_eq :
 @[simp]
 theorem Circuit.atLeastTwo_eval_eq (a b c : Circuit) (env : BitEnv) :
   (Circuit.atLeastTwo a b c).eval env =
-  ((a.eval env) && (b.eval env) || (a.eval env) && (c.eval env) || (b.eval env) && (c.eval env)) := sorry
+  ((a.eval env) && (b.eval env) || (a.eval env) && (c.eval env) || (b.eval env) && (c.eval env)) :=
+  sorry
 
 @[simp]
 theorem Circuit.eval_and (a b : Circuit) (env : BitEnv) :
@@ -146,10 +147,6 @@ theorem halfAdder_correct (h : BitHeap) (i j : Index)
   simp [halfAdder, hijne]
   generalize hvi : (h.get i).eval env = vi
   generalize hvj : (h.get j).eval env = vj
-  rcases vi <;> rcases vj
-  · simp
-  · simp_all
-  · simp_all
-  · simp_all; grind only
+  rcases vi <;> rcases vj <;> grind
 
 end BitHeap
