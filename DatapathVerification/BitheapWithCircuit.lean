@@ -8,7 +8,7 @@ deriving Repr, DecidableEq, Inhabited, Hashable
 /-- A circuit that describes a logical operation.-/
 inductive Circuit
 | bit (varIndex : Nat)
-| binop (op : Binop) ( a b : Circuit)
+| binop (op : Binop) (a b : Circuit)
 | const (val : Bool)
 deriving Repr, DecidableEq, Inhabited, Hashable
 
@@ -50,7 +50,6 @@ deriving Repr, Inhabited
 def evalColumn (col : List Circuit) (env : BitEnv) : Nat :=
   (col.map (fun (c : Circuit) => (c.eval env).toNat)).sum
 
-
 /--
 Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
@@ -80,7 +79,6 @@ def addBit (h : BitHeap) (c : Circuit) (w : Nat) : BitHeap × Index :=
 
 def removeBit (h : BitHeap) (i : Index) : BitHeap :=
   sorry
-
 
 def exampleHeapWithOneVariable : BitHeap :=
   let c := Circuit.bit 0 -- x0
@@ -136,15 +134,10 @@ theorem Circuit.eval_xor (a b : Circuit) (env : BitEnv) :
     (Circuit.binop .xor a b).eval env = ((a.eval env) != (b.eval env)) := by
   simp [Circuit.eval]
 
-
 @[simp]
 theorem toNat_and (a b : Bool) :
   (a && b).toNat = a.toNat * b.toNat := by
   cases a <;> cases b <;> simp
-
-@[simp]
-theorem Int.pow_succ (a : Int) (b : Nat) : a ^ (b + 1) = a ^ b * a := by
-  grind only
 
 theorem halfAdder_correct (h : BitHeap) (i j : Index)
   (hij : i.column = j.column) (hijne : i ≠ j) :
@@ -158,7 +151,5 @@ theorem halfAdder_correct (h : BitHeap) (i j : Index)
   · simp_all
   · simp_all
   · simp_all; grind only
-
-
 
 end BitHeap
