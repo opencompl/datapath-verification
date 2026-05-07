@@ -36,13 +36,13 @@ def Circuit.eval (c : Circuit) (env : BitEnv) : Bool :=
     | .nand => !(aval && bval)
   | .const val => val
 
-def Circuit.atLeastTwo (a b c : Circuit) : Circuit := sorry
+def Circuit.atLeastTwo (a b c : Circuit) : Circuit :=
+  Circuit.binop .or (Circuit.binop .or (Circuit.binop .and a b) (Circuit.binop .and a c)) (Circuit.binop .and b c)
 
 /--
 A bit heap, indexed by the number of bits in the heap.
 -/
 structure BitHeap where
-  -- columns : Std.HashMap Nat (Array Circuit)
   columns : List (List Circuit)
 
 deriving Repr, Inhabited
@@ -75,16 +75,33 @@ def BitHeap.empty : BitHeap := ⟨[]⟩
 Add a bit into the bit heap, returning a new bit heap, and an index to the added bit.
 -/
 def addBit (h : BitHeap) (c : Circuit) (w : Nat) : BitHeap × Index :=
-  sorry
+  let columns :=
+    if w < h.columns.length then h.columns
+    else h.columns ++ List.replicate (w + 1 - h.columns.length) [] -- if the column doesn't exist, add empty columns until it does
+  let col := columns[w]!
+  let newColumns := columns.set w (col ++ [c])
+  (⟨newColumns⟩, ⟨w, col.length⟩)
 
 def removeBit (h : BitHeap) (i : Index) : BitHeap :=
-  sorry
+  let columns := h.columns
+  let col := columns[i.column]!
+  let newCol := col.eraseIdx i.index
+  let newColumns := columns.set i.column newCol
+  ⟨newColumns⟩
 
-def exampleHeapWithOneVariable : BitHeap :=
-  let c := Circuit.bit 0 -- x0
+def addBitsExample : BitHeap :=
   let h := BitHeap.empty
-  let (h, idx) := h.addBit c 1
+  let (h, _) := h.addBit (Circuit.bit 0) 0 -- add a bit in column 0
+  let (h, _) := h.addBit (Circuit.bit 1) 1 -- add a bit in column 1
+  let (h, _) := h.addBit (Circuit.bit 1) 1 -- add another bit in column 1
+  let h := h.removeBit (Index.mk 0 0) -- remove the bit in column 0
   h
+
+/--
+info: { columns := [[], [Circuit.bit 1, Circuit.bit 1]] }
+-/
+#guard_msgs in
+#eval addBitsExample
 
 structure AdderResult where
   heap : BitHeap
@@ -117,26 +134,22 @@ def fullAdder (h : BitHeap) (i j k: Index) (hij : i.column = j.column) (hik : i.
 
 @[simp]
 theorem eval_heap_addBit (h : BitHeap) (c : Circuit) (w : Nat) (env : BitEnv) :
-    (h.addBit c w).fst.eval env = h.eval env +  2^w  * (c.eval env).toInt :=  by
+    (h.addBit c w).fst.eval env = h.eval env +  2^w  * (c.eval env).toInt := by
   sorry
 
 @[simp]
 theorem eval_heap_removeBit (h : BitHeap) (i : Index) (env : BitEnv) :
-  (h.removeBit i).eval env = h.eval env - 2^(i.column) * ((h.get i).eval env).toInt := sorry
+  (h.removeBit i).eval env = h.eval env - 2^(i.column) * ((h.get i).eval env).toInt := by
+  simp [BitHeap.eval, BitHeap.removeBit]
+  sorry
 
 @[simp]
 theorem get_removeBit_of_ne (h : BitHeap) (i j : Index) (hijne : i ≠ j) :
-  (h.removeBit i).get j = h.get j := sorry
+  (h.removeBit i).get j = h.get j := by sorry
 
 @[simp]
 theorem Circuit.const_false_eval_eq :
   (Circuit.const false).eval env = false := by simp [Circuit.eval]
-
-@[simp]
-theorem Circuit.atLeastTwo_eval_eq (a b c : Circuit) (env : BitEnv) :
-  (Circuit.atLeastTwo a b c).eval env =
-  ((a.eval env) && (b.eval env) || (a.eval env) && (c.eval env) || (b.eval env) && (c.eval env)) :=
-  sorry
 
 @[simp]
 theorem Circuit.eval_and (a b : Circuit) (env : BitEnv) :
@@ -147,6 +160,11 @@ theorem Circuit.eval_and (a b : Circuit) (env : BitEnv) :
 theorem Circuit.eval_xor (a b : Circuit) (env : BitEnv) :
     (Circuit.binop .xor a b).eval env = ((a.eval env) != (b.eval env)) := by
   simp [Circuit.eval]
+
+@[simp]
+theorem Circuit.eval_atLeastTwo (a b c : Circuit) (env : BitEnv) :
+  (Circuit.atLeastTwo a b c).eval env = ((a.eval env) && (b.eval env) || (a.eval env) && (c.eval env) || (b.eval env) && (c.eval env)) := by
+  simp [Circuit.eval, Circuit.atLeastTwo]
 
 @[simp]
 theorem toNat_and (a b : Bool) :
@@ -161,5 +179,16 @@ theorem halfAdder_correct (h : BitHeap) (i j : Index)
   generalize hvi : (h.get i).eval env = vi
   generalize hvj : (h.get j).eval env = vj
   rcases vi <;> rcases vj <;> grind
+
+theorem fullAdder_correct (h : BitHeap) (i j k : Index)
+  (hij : i.column = j.column) (hik : i.column = k.column)
+  (hijne : i ≠ j) (hikne : i ≠ k) (hjkne : j ≠ k) :
+  ∀ (env : BitEnv), (h.fullAdder i j k hij hik).heap.eval env = h.eval env := by
+  intros env
+  simp [fullAdder, hijne, hikne, hjkne]
+  generalize hvi : (h.get i).eval env = vi
+  generalize hvj : (h.get j).eval env = vj
+  generalize hvk : (h.get k).eval env = vk
+  rcases vi <;> rcases vj <;> rcases vk <;> grind
 
 end BitHeap
