@@ -61,7 +61,6 @@ Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
 def BitHeap.eval (h : BitHeap) (env : BitEnv) : Int :=
   (h.columns.fold (init := 0) (fun acc w col => acc + (2 ^ w) * evalColumn col.elems env))
-  -- (h.columns.zipIdx.map (fun (col, w) => (2 ^ w) * evalColumn col env)).sum
 
 /-
 An index into a bit-heap, to point at particular bits to create new operations.
