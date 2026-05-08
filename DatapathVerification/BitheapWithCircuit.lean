@@ -46,6 +46,13 @@ structure Column where
   elems : List Circuit
 deriving Inhabited, Repr
 
+def Column.empty : Column := ⟨[]⟩
+
+def Column.insert (col : Column) (c : Circuit): Column × Nat :=
+  let newIndex := col.elems.length
+  let col := ⟨c :: col.elems⟩
+  (col, newIndex)
+
 def Column.eval (col : Column) (env : BitEnv) : Nat :=
   (col.elems.map (fun (c : Circuit) => (c.eval env).toNat)).sum
 
@@ -86,12 +93,11 @@ def BitHeap.empty : BitHeap := ⟨Std.HashMap.emptyWithCapacity 0⟩
 Add a bit into the bit heap, returning a new bit heap, and an index to the added bit.
 -/
 def addBit (h : BitHeap) (c : Circuit) (w : Nat) : BitHeap × Index :=
-  let contains := h.columns.contains w
-  if contains then
-    ⟨⟨h.columns.modify w (fun col => ⟨c :: col.elems⟩)⟩, ⟨w, h.columns.size + 1⟩⟩
-  else
-    ⟨⟨h.columns.insert w ⟨[c]⟩⟩, ⟨w, 0⟩⟩
+  let col := h.columns.getD w (Column.empty)
+  let (col, newIndex) := col.insert c
+  ⟨⟨h.columns.insert w col⟩, ⟨w, newIndex⟩⟩
 
+#check Std.HashMap.containsThenInsert
 def removeBit (h : BitHeap) (i : Index) : BitHeap :=
   ⟨h.columns.modify i.column (fun col => ⟨col.elems.eraseIdx i.index⟩)⟩
 
