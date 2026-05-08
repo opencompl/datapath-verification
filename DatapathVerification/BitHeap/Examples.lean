@@ -1,4 +1,4 @@
-import DatapathVerification.BitheapWithCircuit
+import DatapathVerification.BitHeap.BitHeap
 
 namespace BitHeap.Examples
 
