@@ -71,7 +71,7 @@ structure BitHeap.Index where
 
 /-- Get an element from the bit heap. -/
 def BitHeap.get (h : BitHeap) (i : Index) : Circuit :=
-  (h.columns.get! i.column).elems[i.index]!
+  (h.columns.getD i.column ⟨[Circuit.const false]⟩).elems[i.index]!
 
 namespace BitHeap
 
@@ -84,15 +84,18 @@ Add a bit into the bit heap, returning a new bit heap, and an index to the added
 def addBit (h : BitHeap) (c : Circuit) (w : Nat) : BitHeap × Index :=
   let columns := h.columns
   let col := (columns.getD w ⟨[]⟩).elems
-  let newCol := col ++ [c]
+  let newCol := c :: col
   ⟨⟨h.columns.insert w ⟨newCol⟩⟩, ⟨w, col.length⟩⟩
 
 def removeBit (h : BitHeap) (i : Index) : BitHeap :=
   let columns := h.columns
-  let col := columns[i.column]! -- panic if index does not exist
-  let newCol := col.elems.eraseIdx i.index
-  let newColumns := columns.insert i.column ⟨newCol⟩
-  ⟨newColumns⟩
+  let col := (columns.getD i.column ⟨[]⟩).elems
+  if col = [] then
+    h -- if index does not exist, return the same heap
+  else
+    let newCol := col.eraseIdx i.index
+    let newColumns := columns.insert i.column ⟨newCol⟩
+    ⟨newColumns⟩
 
 def addBitsExample : BitHeap :=
   let h := BitHeap.empty
@@ -195,5 +198,6 @@ theorem fullAdder_correct (h : BitHeap) (i j k : Index)
   generalize hvj : (h.get j).eval env = vj
   generalize hvk : (h.get k).eval env = vk
   rcases vi <;> rcases vj <;> rcases vk <;> grind
+
 
 end BitHeap
