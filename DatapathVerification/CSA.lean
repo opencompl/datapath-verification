@@ -27,6 +27,7 @@ info: { s := 0x5#4, t := 0x5#4 }
 #eval carrySave 4 5 5 5
 
 -- a + b + c = CSA(a, b, c)
+@[bv_normalize]
 theorem carrySaveAdder (w : ℕ) (a b c : BitVec w) :
     let ⟨s, t⟩ := carrySave w a b c
     a + b + c = s + t <<< 1 := by
@@ -135,6 +136,56 @@ theorem chain_correct {w : Nat} (v : List (BitVec w)) :
       clear ih hrest
       bv_automata_classic
 
+/-!
+  N:2 compressor implementation with a more optimized structure. Instead of chaining the carry-save adders in a linear fashion,
+  we compress the input list in a more balanced way. First we compress the first three elements, then we create a new list with the sum and carry from the first compression, and the remaining elements.
+  We then reverse this new list and apply the chain_opt function recursively. This enables applying the carry chain adders to the front and back of the list in parallel.
+-/
+@[bv_normalize]
+def chain_opt {w : Nat} (v : List (BitVec w)) : CSAResult w :=
+  match v with
+  | [] => ⟨0, 0⟩
+  | [a] => ⟨a, 0⟩
+  | [a,b] => carrySave w a b 0
+  | [a,b,c] => carrySave w a b c
+  | a :: b :: c :: rest =>
+    let ⟨sum, carry⟩ := carrySave w a b c
+    let new_list := sum :: (carry <<< 1) :: rest
+    let back := new_list.reverse
+    let ⟨sum, carry⟩ := chain_opt back
+    ⟨sum, carry⟩
+  termination_by v.length
+  decreasing_by
+    simp
+
+#eval chain_opt (v := [5#10, 2#10, 3#10, 7#10, 3#10])
+
+theorem chain_opt_correct {w : Nat} (v : List (BitVec w)) :
+    let ⟨s, t⟩ := chain_opt v
+    list_sum v = s + t <<< 1 := by
+  induction v with
+  | nil =>
+    simp [chain_opt, list_sum]
+  | cons hd rest ih =>
+    match hrest : rest with
+    | [] =>
+      simp [chain_opt, list_sum]
+    | [a] =>
+      simp only [chain_opt, list_sum, carrySave]
+      clear ih hrest rest
+      bv_automata_classic
+    | [a, b] =>
+      simp only [chain_opt, list_sum, carrySave]
+      clear ih hrest rest
+      bv_automata_classic
+    | a :: b :: c :: rest' =>
+      simp only [chain_opt, list_sum, carrySave] at ih ⊢
+      simp
+      unfold chain_opt at ih ⊢
+      clear ih hrest
+      sorry
+      -- bv_automata_classic
+
 -- Recursive partial-products: produces `[p_{n-1}, p_{n-2}, ..., p_0]`
 -- where `p_i = (y[i] ? x : 0) <<< i`.
 @[bv_normalize]
@@ -160,10 +211,15 @@ def mulChain {w : Nat} (a b : BitVec w) : BitVec w :=
   let ⟨s, t⟩ := chain (partialProducts a b)
   s + t <<< 1
 
+@[bv_normalize]
+def mulChain_opt {w : Nat} (a b : BitVec w) : BitVec w :=
+  let ⟨s, t⟩ := chain_opt (partialProducts a b)
+  s + t <<< 1
 /--
 info: 153#8
 -/
 #guard_msgs in
 #eval mulChain (51#8) (3#8)
+#eval mulChain_opt (51#8) (3#8)
 
 end CSA
