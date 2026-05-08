@@ -42,10 +42,16 @@ def Circuit.atLeastTwo (a b c : Circuit) : Circuit :=
 /--
 A bit heap, indexed by the number of bits in the heap.
 -/
-structure BitHeap where
-  columns : List (List Circuit)
+structure Column where
+  elems : List Circuit
+deriving Inhabited, Repr
 
-deriving Repr, Inhabited
+instance [BEq α] [Hashable α] [Repr α] [Repr β] : Repr (Std.HashMap α β) where
+  reprPrec m _ := repr m.toList
+
+structure BitHeap where
+  columns : Std.HashMap Nat Column
+deriving Inhabited, Repr
 
 def evalColumn (col : List Circuit) (env : BitEnv) : Nat :=
   (col.map (fun (c : Circuit) => (c.eval env).toNat)).sum
@@ -54,7 +60,8 @@ def evalColumn (col : List Circuit) (env : BitEnv) : Nat :=
 Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
 def BitHeap.eval (h : BitHeap) (env : BitEnv) : Int :=
-  (h.columns.zipIdx.map (fun (col, w) => (2 ^ w) * evalColumn col env)).sum
+  (h.columns.fold (init := 0) (fun acc w col => acc + (2 ^ w) * evalColumn col.elems env))
+  -- (h.columns.zipIdx.map (fun (col, w) => (2 ^ w) * evalColumn col env)).sum
 
 /-
 An index into a bit-heap, to point at particular bits to create new operations.
@@ -65,28 +72,27 @@ structure BitHeap.Index where
 
 /-- Get an element from the bit heap. -/
 def BitHeap.get (h : BitHeap) (i : Index) : Circuit :=
-  h.columns[i.column]![i.index]!
+  (h.columns.get! i.column).elems[i.index]!
 
 namespace BitHeap
 
-def BitHeap.empty : BitHeap := ⟨[]⟩
+-- def BitHeap.empty : BitHeap := ⟨[]⟩
+def BitHeap.empty : BitHeap := ⟨Std.HashMap.emptyWithCapacity 0⟩
 
 /--
 Add a bit into the bit heap, returning a new bit heap, and an index to the added bit.
 -/
 def addBit (h : BitHeap) (c : Circuit) (w : Nat) : BitHeap × Index :=
-  let columns :=
-    if w < h.columns.length then h.columns
-    else h.columns ++ List.replicate (w + 1 - h.columns.length) [] -- if the column doesn't exist, add empty columns until it does
-  let col := columns[w]!
-  let newColumns := columns.set w (col ++ [c])
-  (⟨newColumns⟩, ⟨w, col.length⟩)
+  let columns := h.columns
+  let col := (columns.getD w ⟨[]⟩).elems
+  let newCol := col ++ [c]
+  ⟨⟨h.columns.insert w ⟨newCol⟩⟩, ⟨w, col.length⟩⟩
 
 def removeBit (h : BitHeap) (i : Index) : BitHeap :=
   let columns := h.columns
-  let col := columns[i.column]!
-  let newCol := col.eraseIdx i.index
-  let newColumns := columns.set i.column newCol
+  let col := columns[i.column]! -- panic if index does not exist
+  let newCol := col.elems.eraseIdx i.index
+  let newColumns := columns.insert i.column ⟨newCol⟩
   ⟨newColumns⟩
 
 def addBitsExample : BitHeap :=
@@ -98,7 +104,7 @@ def addBitsExample : BitHeap :=
   h
 
 /--
-info: { columns := [[], [Circuit.bit 1, Circuit.bit 1]] }
+info: { columns := [(0, { elems := [] }), (1, { elems := [Circuit.bit 1, Circuit.bit 1] })] }
 -/
 #guard_msgs in
 #eval addBitsExample
