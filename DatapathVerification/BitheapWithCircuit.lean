@@ -97,7 +97,6 @@ def addBit (h : BitHeap) (c : Circuit) (w : Nat) : BitHeap × Index :=
   let (col, newIndex) := col.insert c
   ⟨⟨h.columns.insert w col⟩, ⟨w, newIndex⟩⟩
 
-#check Std.HashMap.containsThenInsert
 def removeBit (h : BitHeap) (i : Index) : BitHeap :=
   ⟨h.columns.modify i.column (fun col => ⟨col.elems.eraseIdx i.index⟩)⟩
 
@@ -108,12 +107,6 @@ def addBitsExample : BitHeap :=
   let (h, _) := h.addBit (Circuit.bit 1) 1 -- add another bit in column 1
   let h := h.removeBit (Index.mk 0 0) -- remove the bit in column 0
   h
-
-/--
-info: { columns := [(0, { elems := [] }), (1, { elems := [Circuit.bit 1, Circuit.bit 1] })] }
--/
-#guard_msgs in
-#eval addBitsExample
 
 structure AdderResult where
   heap : BitHeap
@@ -202,6 +195,5 @@ theorem fullAdder_correct (h : BitHeap) (i j k : Index)
   generalize hvj : (h.get j).eval env = vj
   generalize hvk : (h.get k).eval env = vk
   rcases vi <;> rcases vj <;> rcases vk <;> grind
-
 
 end BitHeap
