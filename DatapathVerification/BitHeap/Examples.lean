@@ -1,9 +1,8 @@
 import DatapathVerification.BitHeap.BitHeap
 
-open BitHeap
-open BitHeap.Circuit
+namespace BitHeap
 
-namespace BitHeap.Examples
+namespace Examples
 
 def addBitsExample : BitHeap :=
   let h := BitHeap.empty
@@ -18,4 +17,6 @@ info: { columns := [(0, { elems := [] }), (1, { elems := [BitHeap.Circuit.bit 1,
 #guard_msgs in
 #eval addBitsExample
 
-end BitHeap.Examples
+end Examples
+
+end BitHeap

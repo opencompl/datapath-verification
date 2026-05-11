@@ -60,3 +60,5 @@ theorem eval_atLeastTwo (a b c : Circuit) (env : BitEnv) :
   simp [eval, atLeastTwo]
 
 end Circuit
+
+end BitHeap
