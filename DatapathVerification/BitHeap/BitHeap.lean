@@ -15,6 +15,8 @@ namespace BitHeap
 open Circuit
 open Column
 
+def empty : BitHeap := ⟨Std.HashMap.emptyWithCapacity 0⟩
+
 /--
 Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
@@ -34,8 +36,6 @@ def get (h : BitHeap) (i : Index) : Circuit :=
   | none => Circuit.const false
   | some col => (col.getD i.index (Circuit.const false))
 
-def empty : BitHeap := ⟨Std.HashMap.emptyWithCapacity 0⟩
-
 /--
 Add a bit into the bit heap, returning a new bit heap, and an index to the added bit.
 -/
@@ -46,14 +46,6 @@ def addBit (h : BitHeap) (c : Circuit) (w : Nat) : BitHeap × Index :=
 
 def removeBit (h : BitHeap) (i : Index) : BitHeap :=
   ⟨h.columns.modify i.column (fun col => ⟨col.elems.eraseIdx i.index⟩)⟩
-
-def addBitsExample : BitHeap :=
-  let h := BitHeap.empty
-  let (h, _) := h.addBit (Circuit.bit 0) 0 -- add a bit in column 0
-  let (h, _) := h.addBit (Circuit.bit 1) 1 -- add a bit in column 1
-  let (h, _) := h.addBit (Circuit.bit 1) 1 -- add another bit in column 1
-  let h := h.removeBit (Index.mk 0 0) -- remove the bit in column 0
-  h
 
 structure AdderResult where
   heap : BitHeap

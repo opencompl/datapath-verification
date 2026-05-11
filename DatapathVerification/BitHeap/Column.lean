@@ -17,7 +17,7 @@ def empty : Column := ⟨[]⟩
 
 def insert (col : Column) (c : Circuit): Column × Nat :=
   let newIndex := col.elems.length
-  let col := ⟨c :: col.elems⟩
+  let col := ⟨col.elems ++ [c]⟩
   (col, newIndex)
 
 def eval (col : Column) (env : BitEnv) : Nat :=
