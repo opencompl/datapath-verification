@@ -31,15 +31,18 @@ structure AdderResult where
 def removeBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
   ⟨h.columns.modify column (fun col => ⟨col.elems.erase c⟩)⟩
 
+def columnsWithFrom (column : Nat) (c : Circuit) (h : BitHeap) : Nat :=
+  h.columns.fold (fun acc k col =>
+    if k ≥ column && col.contains c then acc + 1 else acc) 0
+
 /--
 Add a bit into the bit heap, returning a new bit heap. If the bit already exists in the column, remove it and add it to the next column.
 -/
-def addBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
+partial def addBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
   let col := h.columns.getD column (Column.empty)
   if col.contains c then
     let h := h.removeBit column c
-    let col := h.columns.getD (column + 1) (Column.empty)
-    ⟨h.columns.insert (column + 1) (col.insert c)⟩
+    addBit (column + 1) c h
   else
     ⟨h.columns.insert column (col.insert c)⟩
 
