@@ -1,5 +1,5 @@
 import Blase
-import DatapathVerification.CSA
+import DatapathVerification.CSA.CSA
 
 /-!
   This file compares the performance of bv_decide in different multiplication circuits.
