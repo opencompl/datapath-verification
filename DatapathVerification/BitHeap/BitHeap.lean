@@ -23,97 +23,78 @@ Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 def eval (h : BitHeap) (env : BitEnv) : Int :=
   (h.columns.fold (init := 0) (fun acc w col => acc + (2 ^ w) * col.eval env))
 
-/-
-An index into a bit-heap, to point at particular bits to create new operations.
--/
-structure Index where
-  column : Nat
-  index : Nat
-
-/-- Get an element from the bit heap. -/
-def get (h : BitHeap) (i : Index) : Circuit :=
-  match h.columns.get? i.column with
-  | none => Circuit.const false
-  | some col => (col.getD i.index (Circuit.const false))
-
-/--
-Add a bit into the bit heap, returning a new bit heap, and an index to the added bit.
--/
-def addBit (h : BitHeap) (c : Circuit) (w : Nat) : BitHeap × Index :=
-  let col := h.columns.getD w (Column.empty)
-  let (col, newIndex) := col.insert c
-  ⟨⟨h.columns.insert w col⟩, ⟨w, newIndex⟩⟩
-
-def removeBit (h : BitHeap) (i : Index) : BitHeap :=
-  ⟨h.columns.modify i.column (fun col => ⟨col.elems.eraseIdx i.index⟩)⟩
-
 structure AdderResult where
   heap : BitHeap
-  sumIndex : Index
-  carryIndex : Index
+  sum : Circuit
+  carry : Circuit
 
-def halfAdder (h : BitHeap) (i j : Index) (hij : i.column = j.column) : AdderResult :=
-  let bi := h.get i
-  let bj := h.get j
-  let h := h.removeBit i
-  let h := h.removeBit j
-  let sum := Circuit.binop .xor bi bj -- Circuit.atLeastTwo bi bj (Circuit.const false)
-  let carry := Circuit.binop .and bi bj
-  let (h, sumIndex) := h.addBit sum i.column
-  let (h, carryIndex) := h.addBit carry (i.column + 1)
-  ⟨h, sumIndex, carryIndex⟩
+def removeBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
+  ⟨h.columns.modify column (fun col => ⟨col.elems.erase c⟩)⟩
 
-def fullAdder (h : BitHeap) (i j k: Index) (hij : i.column = j.column) (hik : i.column = k.column) : AdderResult :=
-  let bi := h.get i
-  let bj := h.get j
-  let bk := h.get k
-  let h := h.removeBit i
-  let h := h.removeBit j
-  let h := h.removeBit k
-  let sum := Circuit.binop .xor (Circuit.binop .xor bi bj) bk
-  let carry := Circuit.atLeastTwo bi bj bk
-  let (h, sumIndex) := h.addBit sum i.column
-  let (h, carryIndex) := h.addBit carry (i.column + 1)
-  ⟨h, sumIndex, carryIndex⟩
+/--
+Add a bit into the bit heap, returning a new bit heap. If the bit already exists in the column, remove it and add it to the next column.
+-/
+def addBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
+  let col := h.columns.getD column (Column.empty)
+  if col.contains c then
+    let h := h.removeBit column c
+    let col := h.columns.getD (column + 1) (Column.empty)
+    ⟨h.columns.insert (column + 1) (col.insert c)⟩
+  else
+    ⟨h.columns.insert column (col.insert c)⟩
+
+def halfAdder (column : Nat) (i j : Circuit) (h : BitHeap) : AdderResult :=
+  let h := h.removeBit column i
+  let h := h.removeBit column j
+  let sum := Circuit.binop .xor i j
+  let carry := Circuit.binop .and i j
+  let h := h.addBit column sum
+  let h := h.addBit (column + 1) carry
+  ⟨h, sum, carry⟩
+
+def fullAdder (column : Nat) (i j k : Circuit) (h : BitHeap) : AdderResult :=
+  let h := h.removeBit column i
+  let h := h.removeBit column j
+  let h := h.removeBit column k
+  let sum := Circuit.binop .xor (Circuit.binop .xor i j) k
+  let carry := Circuit.atLeastTwo i j k
+  let h := h.addBit column sum
+  let h := h.addBit (column + 1) carry
+  ⟨h, sum, carry⟩
 
 @[simp]
-theorem eval_heap_addBit (h : BitHeap) (c : Circuit) (w : Nat) (env : BitEnv) :
-    (h.addBit c w).fst.eval env = h.eval env +  2^w  * (c.eval env).toInt := by
-  sorry
+theorem eval_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap) (env : BitEnv) :
+    (h.addBit column c).eval env = h.eval env +  2^column  * (c.eval env).toInt := by
+  simp [BitHeap.eval, BitHeap.addBit]
+  by_cases h : (h.columns.getD column (Column.empty)).contains c
+  <;> sorry
 
 @[simp]
-theorem eval_heap_removeBit (h : BitHeap) (i : Index) (env : BitEnv) :
-  (h.removeBit i).eval env = h.eval env - 2^(i.column) * ((h.get i).eval env).toInt := by
+theorem eval_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap) (env : BitEnv) :
+  (h.removeBit column c).eval env = h.eval env - 2^(column) * (c.eval env).toInt := by
   simp [BitHeap.eval, BitHeap.removeBit]
   sorry
-
-@[simp]
-theorem get_removeBit_of_ne (h : BitHeap) (i j : Index) (hijne : i ≠ j) :
-  (h.removeBit i).get j = h.get j := by sorry
 
 @[simp]
 theorem toNat_and (a b : Bool) :
   (a && b).toNat = a.toNat * b.toNat := by
   cases a <;> cases b <;> simp
 
-theorem halfAdder_correct (h : BitHeap) (i j : Index)
-  (hij : i.column = j.column) (hijne : i ≠ j) :
-  ∀ (env : BitEnv), (h.halfAdder i j hij).heap.eval env = h.eval env := by
+theorem halfAdder_correct (column : Nat) (i j : Circuit) (h : BitHeap) :
+  ∀ (env : BitEnv), (h.halfAdder column i j).heap.eval env = h.eval env := by
   intros env
-  simp [halfAdder, hijne]
-  generalize hvi : (h.get i).eval env = vi
-  generalize hvj : (h.get j).eval env = vj
+  simp [halfAdder]
+  generalize hvi : i.eval env = vi
+  generalize hvj : j.eval env = vj
   rcases vi <;> rcases vj <;> grind
 
-theorem fullAdder_correct (h : BitHeap) (i j k : Index)
-  (hij : i.column = j.column) (hik : i.column = k.column)
-  (hijne : i ≠ j) (hikne : i ≠ k) (hjkne : j ≠ k) :
-  ∀ (env : BitEnv), (h.fullAdder i j k hij hik).heap.eval env = h.eval env := by
+theorem fullAdder_correct (column : Nat) (i j k : Circuit) (h : BitHeap) :
+  ∀ (env : BitEnv), (h.fullAdder column i j k).heap.eval env = h.eval env := by
   intros env
-  simp [fullAdder, hijne, hikne, hjkne]
-  generalize hvi : (h.get i).eval env = vi
-  generalize hvj : (h.get j).eval env = vj
-  generalize hvk : (h.get k).eval env = vk
+  simp [fullAdder]
+  generalize hvi : i.eval env = vi
+  generalize hvj : j.eval env = vj
+  generalize hvk : k.eval env = vk
   rcases vi <;> rcases vj <;> rcases vk <;> grind
 
 end BitHeap

@@ -1,3 +1,4 @@
+import Std.Data.HashSet
 import DatapathVerification.BitHeap.Circuit
 
 namespace BitHeap
@@ -5,26 +6,25 @@ namespace BitHeap
 open Circuit
 
 /--
-A bit heap, indexed by the number of bits in the heap.
+A column of a bit heap.
 -/
 structure Column where
-  elems : List Circuit
+  elems : Std.HashSet Circuit
 deriving Inhabited, Repr
 
 namespace Column
 
-def empty : Column := ⟨[]⟩
+def empty : Column := ⟨Std.HashSet.emptyWithCapacity 0⟩
 
-def insert (col : Column) (c : Circuit): Column × Nat :=
-  let newIndex := col.elems.length
-  let col := ⟨col.elems ++ [c]⟩
-  (col, newIndex)
+def insert (col : Column) (c : Circuit) : Column :=
+  let col := ⟨col.elems.insert c⟩
+  col
+
+def contains (col : Column) (c : Circuit) : Bool :=
+  col.elems.contains c
 
 def eval (col : Column) (env : BitEnv) : Nat :=
-  (col.elems.map (fun (c : Circuit) => (c.eval env).toNat)).sum
-
-def getD (col : Column) (i : Nat) (default : Circuit) : Circuit :=
-  col.elems.getD i default
+  (col.elems.fold (init := 0) (fun acc (c : Circuit) => acc + (c.eval env).toNat))
 
 end Column
 
