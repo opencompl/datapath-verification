@@ -1,4 +1,4 @@
-namespace BitHeapCircuit
+namespace BitHeap
 
 inductive Binop
 | xor | or | and | nand
@@ -11,8 +11,10 @@ inductive Circuit
 | const (val : Bool)
 deriving Repr, DecidableEq, Inhabited, Hashable
 
+namespace Circuit
+
 /-- The number of variables in a circuit. -/
-def Circuit.numVars (c : Circuit) : Nat :=
+def numVars (c : Circuit) : Nat :=
   match c with
   | .bit varIndex => varIndex + 1
   | .binop _ a b => max a.numVars b.numVars
@@ -22,7 +24,7 @@ def Circuit.numVars (c : Circuit) : Nat :=
 def BitEnv := Nat → Bool
 
 /-- Evaluate a circuit under a given environment. -/
-def Circuit.eval (c : Circuit) (env : BitEnv) : Bool :=
+def eval (c : Circuit) (env : BitEnv) : Bool :=
   match c with
   | .bit varIndex => env varIndex
   | .binop op a b =>
@@ -35,26 +37,26 @@ def Circuit.eval (c : Circuit) (env : BitEnv) : Bool :=
     | .nand => !(aval && bval)
   | .const val => val
 
-def Circuit.atLeastTwo (a b c : Circuit) : Circuit :=
-  Circuit.binop .or (Circuit.binop .or (Circuit.binop .and a b) (Circuit.binop .and a c)) (Circuit.binop .and b c)
+def atLeastTwo (a b c : Circuit) : Circuit :=
+  binop .or (binop .or (binop .and a b) (binop .and a c)) (binop .and b c)
 
 @[simp]
-theorem Circuit.const_false_eval_eq :
-  (Circuit.const false).eval env = false := by simp [Circuit.eval]
+theorem const_false_eval_eq :
+  (const false).eval env = false := by simp [eval]
 
 @[simp]
-theorem Circuit.eval_and (a b : Circuit) (env : BitEnv) :
-    (Circuit.binop .and a b).eval env = ((a.eval env) && (b.eval env)) := by
-  simp [Circuit.eval]
+theorem eval_and (a b : Circuit) (env : BitEnv) :
+    (binop .and a b).eval env = ((a.eval env) && (b.eval env)) := by
+  simp [eval]
 
 @[simp]
-theorem Circuit.eval_xor (a b : Circuit) (env : BitEnv) :
-    (Circuit.binop .xor a b).eval env = ((a.eval env) != (b.eval env)) := by
-  simp [Circuit.eval]
+theorem eval_xor (a b : Circuit) (env : BitEnv) :
+    (binop .xor a b).eval env = ((a.eval env) != (b.eval env)) := by
+  simp [eval]
 
 @[simp]
-theorem Circuit.eval_atLeastTwo (a b c : Circuit) (env : BitEnv) :
-  (Circuit.atLeastTwo a b c).eval env = ((a.eval env) && (b.eval env) || (a.eval env) && (c.eval env) || (b.eval env) && (c.eval env)) := by
-  simp [Circuit.eval, Circuit.atLeastTwo]
+theorem eval_atLeastTwo (a b c : Circuit) (env : BitEnv) :
+  (atLeastTwo a b c).eval env = ((a.eval env) && (b.eval env) || (a.eval env) && (c.eval env) || (b.eval env) && (c.eval env)) := by
+  simp [eval, atLeastTwo]
 
-end BitHeapCircuit
+end Circuit

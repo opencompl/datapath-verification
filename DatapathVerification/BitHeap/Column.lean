@@ -1,8 +1,9 @@
 import DatapathVerification.BitHeap.Circuit
 
-open BitHeapCircuit
+namespace BitHeap
 
-namespace BitheapColumn
+open Circuit
+
 /--
 A bit heap, indexed by the number of bits in the heap.
 -/
@@ -10,17 +11,21 @@ structure Column where
   elems : List Circuit
 deriving Inhabited, Repr
 
-def Column.empty : Column := ⟨[]⟩
+namespace Column
 
-def Column.insert (col : Column) (c : Circuit): Column × Nat :=
+def empty : Column := ⟨[]⟩
+
+def insert (col : Column) (c : Circuit): Column × Nat :=
   let newIndex := col.elems.length
   let col := ⟨c :: col.elems⟩
   (col, newIndex)
 
-def Column.eval (col : Column) (env : BitEnv) : Nat :=
+def eval (col : Column) (env : BitEnv) : Nat :=
   (col.elems.map (fun (c : Circuit) => (c.eval env).toNat)).sum
 
-def Column.getD (col : Column) (i : Nat) (default : Circuit) : Circuit :=
+def getD (col : Column) (i : Nat) (default : Circuit) : Circuit :=
   col.elems.getD i default
 
-end BitheapColumn
+end Column
+
+end BitHeap

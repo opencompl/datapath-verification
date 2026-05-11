@@ -1,7 +1,8 @@
 import DatapathVerification.BitHeap.BitHeap
 
 open BitHeap
-open BitHeapCircuit
+open BitHeap.Circuit
+
 namespace BitHeap.Examples
 
 def addBitsExample : BitHeap :=
@@ -12,7 +13,7 @@ def addBitsExample : BitHeap :=
   let h := h.removeBit (Index.mk 0 0) -- remove the bit in column 0
   h
 /--
-info: { columns := [(0, { elems := [] }), (1, { elems := [BitHeapCircuit.Circuit.bit 1, BitHeapCircuit.Circuit.bit 1] })] }
+info: { columns := [(0, { elems := [] }), (1, { elems := [BitHeap.Circuit.bit 1, BitHeap.Circuit.bit 1] })] }
 -/
 #guard_msgs in
 #eval addBitsExample

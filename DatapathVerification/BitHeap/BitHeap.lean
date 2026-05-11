@@ -3,38 +3,38 @@ import Std.Data.HashSet
 import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.Column
 
-open BitHeapCircuit
-open BitheapColumn
-
 instance [BEq α] [Hashable α] [Repr α] [Repr β] : Repr (Std.HashMap α β) where
   reprPrec m _ := repr m.toList
 
 structure BitHeap where
-  columns : Std.HashMap Nat Column
+  columns : Std.HashMap Nat BitHeap.Column
 deriving Inhabited, Repr
+
+namespace BitHeap
+
+open Circuit
+open Column
 
 /--
 Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
-def BitHeap.eval (h : BitHeap) (env : BitEnv) : Int :=
+def eval (h : BitHeap) (env : BitEnv) : Int :=
   (h.columns.fold (init := 0) (fun acc w col => acc + (2 ^ w) * col.eval env))
 
 /-
 An index into a bit-heap, to point at particular bits to create new operations.
 -/
-structure BitHeap.Index where
+structure Index where
   column : Nat
   index : Nat
 
 /-- Get an element from the bit heap. -/
-def BitHeap.get (h : BitHeap) (i : Index) : Circuit :=
+def get (h : BitHeap) (i : Index) : Circuit :=
   match h.columns.get? i.column with
   | none => Circuit.const false
   | some col => (col.getD i.index (Circuit.const false))
 
-namespace BitHeap
-
-def BitHeap.empty : BitHeap := ⟨Std.HashMap.emptyWithCapacity 0⟩
+def empty : BitHeap := ⟨Std.HashMap.emptyWithCapacity 0⟩
 
 /--
 Add a bit into the bit heap, returning a new bit heap, and an index to the added bit.
