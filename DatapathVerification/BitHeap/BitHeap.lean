@@ -29,11 +29,7 @@ structure AdderResult where
   carry : Circuit
 
 def removeBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
-  ⟨h.columns.modify column (fun col => ⟨col.elems.erase c⟩)⟩
-
-def columnsWithFrom (column : Nat) (c : Circuit) (h : BitHeap) : Nat :=
-  h.columns.fold (fun acc k col =>
-    if k ≥ column && col.contains c then acc + 1 else acc) 0
+  ⟨h.columns.modify column (fun col => col.erase c)⟩
 
 /--
 Add a bit into the bit heap, returning a new bit heap. If the bit already exists in the column, remove it and add it to the next column.
