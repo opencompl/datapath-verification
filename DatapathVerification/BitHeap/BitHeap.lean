@@ -28,6 +28,13 @@ structure AdderResult where
   sum : Circuit
   carry : Circuit
 
+def get (h : BitHeap) (column : Nat) : Column :=
+  h.columns.getD column (Column.empty)
+
+instance : Membership Circuit BitHeap where
+  mem h c :=
+    ∃ (col : Nat), c ∈ h.get col
+
 def removeBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
   ⟨h.columns.modify column (fun col => col.erase c)⟩
 
@@ -64,14 +71,18 @@ def fullAdder (column : Nat) (i j k : Circuit) (h : BitHeap) : AdderResult :=
 @[simp]
 theorem eval_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap) (env : BitEnv) :
     (h.addBit column c).eval env = h.eval env +  2^column  * (c.eval env).toInt := by
-  simp [BitHeap.eval, BitHeap.addBit]
-  by_cases h : (h.columns.getD column (Column.empty)).contains c
-  <;> sorry
+  sorry
 
 @[simp]
-theorem eval_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap) (env : BitEnv) :
+theorem eval_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap) (env : BitEnv) (h1 : c ∈ h.get column) :
   (h.removeBit column c).eval env = h.eval env - 2^(column) * (c.eval env).toInt := by
   simp [BitHeap.eval, BitHeap.removeBit]
+  sorry
+
+@[simp]
+theorem get_removeBit_of_ne (column : Nat) (h : BitHeap) (i j : Circuit)
+  (h1 : i ∈ h.get column) (hne : i ≠ j) :
+  i ∈ (removeBit column j h).get column := by
   sorry
 
 @[simp]
@@ -79,18 +90,23 @@ theorem toNat_and (a b : Bool) :
   (a && b).toNat = a.toNat * b.toNat := by
   cases a <;> cases b <;> simp
 
-theorem halfAdder_correct (column : Nat) (i j : Circuit) (h : BitHeap) :
+theorem halfAdder_correct (column : Nat) (i j : Circuit) (h : BitHeap) (h1 : i ∈ h.get column) (h2 : j ∈ h.get column) (hne : i ≠ j):
   ∀ (env : BitEnv), (h.halfAdder column i j).heap.eval env = h.eval env := by
   intros env
-  simp [halfAdder]
+  have h3 := get_removeBit_of_ne column h j i h2 hne.symm
+  simp [halfAdder, h1, h3]
   generalize hvi : i.eval env = vi
   generalize hvj : j.eval env = vj
   rcases vi <;> rcases vj <;> grind
 
-theorem fullAdder_correct (column : Nat) (i j k : Circuit) (h : BitHeap) :
+theorem fullAdder_correct (column : Nat) (i j k : Circuit) (h : BitHeap)
+  (h1 : i ∈ h.get column) (h2 : j ∈ h.get column) (h3 : k ∈ h.get column) (hne : i ≠ j) (hne2 : i ≠ k) (hne3 : j ≠ k) :
   ∀ (env : BitEnv), (h.fullAdder column i j k).heap.eval env = h.eval env := by
   intros env
-  simp [fullAdder]
+  have h4 := get_removeBit_of_ne column h j i h2 hne.symm
+  have h5 := get_removeBit_of_ne column (removeBit column i h) k
+  have h6 := h5 j (get_removeBit_of_ne column h k i h3 hne2.symm) hne3.symm
+  simp [fullAdder, h1, h4, h6]
   generalize hvi : i.eval env = vi
   generalize hvj : j.eval env = vj
   generalize hvk : k.eval env = vk

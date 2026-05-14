@@ -17,6 +17,9 @@ namespace Column
 def contains (col : Column) (c : Circuit) : Bool :=
   col.elems.contains c
 
+instance : Membership Circuit Column where
+  mem col c := c ∈ col.elems
+
 def empty : Column := ⟨Std.HashSet.emptyWithCapacity 0⟩
 
 def eval (col : Column) (env : BitEnv) : Nat :=
