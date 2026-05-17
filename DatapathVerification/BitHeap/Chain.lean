@@ -37,7 +37,7 @@ def ChainPreconditions (steps : List Adder) (h : BitHeap) : Prop :=
       ∧ ChainPreconditions rest (applyAdder s h)
 
 /-- Main correctness theorem for the chain.
-    Applying the chain preserves the heap's value under all evaluation environments-/
+    Applying the chain preserves the heap's value under all evaluation environments -/
 theorem applyChain_correct (steps : List Adder) (h : BitHeap)
   (hwf : ChainPreconditions steps h) :
   ∀ (env : BitEnv), (applyChain steps h).eval env = h.eval env := by
