@@ -6,34 +6,24 @@ open Circuit
 
 namespace Chain
 
+/-- A single step in the chain, either a half adder or a full adder -/
 inductive Adder where
 | halfAdder (column : Nat) (a b : Circuit)
 | fullAdder (column : Nat) (a b c : Circuit)
 
+/-- Apply an adder to a bit heap returning the updated heap -/
 def applyAdder (adder : Adder) (h : BitHeap) : BitHeap :=
   match adder with
   | .halfAdder column i j => (h.halfAdder column i j).heap
   | .fullAdder column i j k => (h.fullAdder column i j k).heap
 
-theorem applyAdder_halfAdder_correct (column : Nat) (i j : Circuit) (h : BitHeap)
-    (h1 : i ∈ h.get column) (h2 : j ∈ h.get column) (hne : i ≠ j) :
-    ∀ (env : BitEnv), (applyAdder (.halfAdder column i j) h).eval env = h.eval env := by
-    intros env
-    simp [applyAdder]
-    exact halfAdder_correct column i j h h1 h2 hne env
-
-theorem applyAdder_fullAdder_correct (column : Nat) (i j k : Circuit) (h : BitHeap)
-    (h1 : i ∈ h.get column) (h2 : j ∈ h.get column) (h3 : k ∈ h.get column) (hne : i ≠ j) (hne2 : i ≠ k) (hne3 : j ≠ k) :
-    ∀ (env : BitEnv), (applyAdder (.fullAdder column i j k) h).eval env = h.eval env := by
-    intros env
-    simp [applyAdder]
-    exact fullAdder_correct column i j k h h1 h2 h3 hne hne2 hne3 env
-
+/-- Apply a list of adders, from front to the back -/
 def applyChain (adders : List Adder) (h : BitHeap) : BitHeap :=
   match adders with
   | [] => h
   | s :: rest => applyChain rest (applyAdder s h)
 
+/-- Preconditions for each step in the chain -/
 def ChainPreconditions (steps : List Adder) (h : BitHeap) : Prop :=
   match steps with
   | [] => True
@@ -46,9 +36,12 @@ def ChainPreconditions (steps : List Adder) (h : BitHeap) : Prop :=
              ∧ i ≠ j ∧ i ≠ k ∧ j ≠ k)
       ∧ ChainPreconditions rest (applyAdder s h)
 
-theorem applyChain_correct (steps : List Adder) (h : BitHeap) (env : BitEnv)
+/-- Main correctness theorem for the chain.
+    Applying the chain preserves the heap's value under all evaluation environments-/
+theorem applyChain_correct (steps : List Adder) (h : BitHeap)
   (hwf : ChainPreconditions steps h) :
-  (applyChain steps h).eval env = h.eval env := by
+  ∀ (env : BitEnv), (applyChain steps h).eval env = h.eval env := by
+  intros env
   induction steps generalizing h with
   | nil => rfl
   | cons s rest ih =>
