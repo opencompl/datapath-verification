@@ -65,14 +65,14 @@ info: 8
 #eval (applyChain badChain fourBitsInCol1).eval
         (show BitEnv from fun n => n = 1 || n = 2 || n = 3)
 
--- Returns none since the half adder is not applicable (bit 1 is not in the heap).
+-- Returns none since the half adder is not applicable (constant bit is not in the heap).
 /--
 info: none
 -/
 #guard_msgs in
 #eval applyChainSafe badChain fourBitsInCol1
 
--- Return the correct value.
+-- Returns the correct value.
 /--
 info: 6
 -/
