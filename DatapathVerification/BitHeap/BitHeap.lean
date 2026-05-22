@@ -38,6 +38,15 @@ instance : Membership Circuit BitHeap where
 def removeBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
   ⟨h.columns.modify column (fun col => col.erase c)⟩
 
+-- Maximum height across all columns
+def maxHeight (h : BitHeap) : Nat :=
+  h.columns.fold (init := 0) (fun acc _ col => max acc col.height)
+
+-- Highest column of the BitHeap, return none if BitHeap is empty
+def highestColumn (h : BitHeap) : Option Nat :=
+  let target := h.maxHeight
+  h.columns.toList.findSome? (fun (idx, col) => if col.height == target then some idx else none)
+
 /--
 Add a bit into the bit heap, returning a new bit heap. If the bit already exists in the column, remove it and add it to the next column.
 -/

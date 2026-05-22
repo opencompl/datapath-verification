@@ -51,6 +51,27 @@ info: 6
 #guard_msgs in
 #eval (applyChain compressionChain fourBitsInCol1).eval (show BitEnv from fun n => n = 1 || n = 2 || n = 3)
 
+def exampleHeap : BitHeap :=
+  let h := BitHeap.empty
+  let h := h.addBit 1 (Circuit.bit 0)
+  let h := h.addBit 1 (Circuit.bit 1)
+  let h := h.addBit 2 (Circuit.bit 2)
+  let h := h.addBit 2 (Circuit.bit 3)
+  let h := h.addBit 2 (Circuit.bit 4)
+  h
+
+/--
+info: 3
+-/
+#guard_msgs in
+#eval exampleHeap.maxHeight
+
+/--
+info: some 2
+-/
+#guard_msgs in
+#eval exampleHeap.highestColumn
+
 end Examples
 
 end BitHeap
