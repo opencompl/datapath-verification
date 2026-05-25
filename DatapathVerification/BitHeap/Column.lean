@@ -33,6 +33,12 @@ def erase (col : Column) (c : Circuit) : Column :=
   let col := ⟨col.elems.erase c⟩
   col
 
+def height (col : Column) : Nat :=
+  col.elems.size
+
+@[simp]
+theorem height_eq_size (col : Column) : col.height = col.elems.size := rfl
+
 end Column
 
 end BitHeap
