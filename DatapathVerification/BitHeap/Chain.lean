@@ -55,6 +55,26 @@ theorem applyChain_correct (steps : List Adder) (h : BitHeap)
       simp [applyAdder, fullAdder_correct, hwf]
     grind
 
+@[simp]
+theorem applyChain_preserves_width (steps : List Adder) (h : BitHeap) : (applyChain steps h).width = h.width := by
+  induction steps generalizing h with
+  | nil => rfl
+  | cons s rest ih =>
+    simp [applyChain]
+    cases s with
+    | halfAdder =>
+      simp [applyAdder, ih]
+    | fullAdder =>
+      simp [applyAdder, ih]
+
+theorem applyChain_correct_mod (steps : List Adder) (h : BitHeap)
+  (hwf : ChainPreconditions steps h) :
+  ∀ (env : BitEnv), (applyChain steps h).evalMod env = h.evalMod env := by
+  intros env
+  simp [evalMod]
+  rw [applyChain_correct]
+  grind
+
 /-- Check if a single step of the chain is applicable -/
 def isApplicable (step: Adder) (h : BitHeap) : Bool :=
   match step with
