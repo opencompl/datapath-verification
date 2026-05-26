@@ -31,7 +31,9 @@ def multiColSmall : BitHeap :=
   let h := h.addBit 1 (Circuit.bit 2)
   let h := h.addBit 1 (Circuit.bit 3)
   let h := h.addBit 1 (Circuit.bit 4)
-  let h := h.addBit 2 (Circuit.bit 5)
+  let h := h.addBit 1 (Circuit.bit 5)
+  let h := h.addBit 2 (Circuit.bit 6)
+  let h := h.addBit 2 (Circuit.bit 7)
   h
 
 abbrev BitEnv := Nat → Bool
@@ -86,32 +88,32 @@ info: 6
 
 -------------
 /--
-info: 7
+info: 5
 -/
 #guard_msgs in
 #eval multiColSmall.eval (show BitEnv from env2)
 
 /--
-info: 4
+info: 2
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).2.length
 
 -- Value preserved
 /--
-info: 7
+info: 5
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).1.eval (show BitEnv from env2)
 
 /--
-info: 1
+info: 2
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).1.maxHeight
 
 /--
-info: [HA(0: b1, b0), FA(1: b2, b4, b3), HA(1: ((b2 ⊕ b4) ⊕ b3), (b1 ∧ b0)), FA(2: (((b2 ∧ b4) ∨ (b2 ∧ b3)) ∨ (b4 ∧ b3)), b5, (((b2 ⊕ b4) ⊕ b3) ∧ (b1 ∧ b0)))]
+info: [FA(1: b2, b4, b3), HA(2: (((b2 ∧ b4) ∨ (b2 ∧ b3)) ∨ (b4 ∧ b3)), b7)]
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).2
