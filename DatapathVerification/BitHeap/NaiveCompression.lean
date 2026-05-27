@@ -10,7 +10,7 @@ namespace NaiveCompression
 /- Takes the bitheap and compresses it starting from the first column as much as it can in one go.
 Another difference with the Wallace tree is that this naive approach consumes carries in the same round. -/
 
--- if height >= 3, apply FA. if height = 2, apply HA.
+-- if height >= 4, apply FA. if height = 3, apply HA.
 def reduceColumnStep (col : Nat) (h : BitHeap) : Option (BitHeap × Adder) :=
     match (h.get col).toList with
   | a :: b :: c :: _ :: _ =>

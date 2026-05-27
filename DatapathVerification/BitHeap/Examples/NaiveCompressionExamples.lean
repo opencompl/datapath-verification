@@ -9,14 +9,14 @@ open Chain
 namespace NaiveCompressionExamples
 
 def threeBitsInCol1 : BitHeap :=
-  let h := BitHeap.empty
+  let h : BitHeap := ⟨1, Std.HashMap.emptyWithCapacity 0⟩
   let h := h.addBit 1 (Circuit.bit 0)
   let h := h.addBit 1 (Circuit.bit 1)
   let h := h.addBit 1 (Circuit.bit 2)
   h
 
 def fiveBitsInCol1 : BitHeap :=
-  let h := BitHeap.empty
+  let h : BitHeap := ⟨1, Std.HashMap.emptyWithCapacity 0⟩
   let h := h.addBit 1 (Circuit.bit 0)
   let h := h.addBit 1 (Circuit.bit 1)
   let h := h.addBit 1 (Circuit.bit 2)
@@ -25,7 +25,7 @@ def fiveBitsInCol1 : BitHeap :=
   h
 
 def multiColSmall : BitHeap :=
-  let h := BitHeap.empty
+  let h : BitHeap := ⟨3, Std.HashMap.emptyWithCapacity 0⟩
   let h := h.addBit 0 (Circuit.bit 0)
   let h := h.addBit 0 (Circuit.bit 1)
   let h := h.addBit 1 (Circuit.bit 2)
@@ -39,7 +39,7 @@ def multiColSmall : BitHeap :=
 abbrev BitEnv := Nat → Bool
 
 def env1 : BitEnv := fun n => n = 0 || n = 2 || n = 4
-def env2 : BitEnv := fun n => n = 0 || n = 2 || n = 5
+def env2 : BitEnv := fun n => n = 0 || n = 2 || n = 5 || n = 6
 
 -------------
 
@@ -88,7 +88,7 @@ info: 6
 
 -------------
 /--
-info: 5
+info: 9
 -/
 #guard_msgs in
 #eval multiColSmall.eval (show BitEnv from env2)
@@ -101,7 +101,7 @@ info: 2
 
 -- Value preserved
 /--
-info: 5
+info: 9
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).1.eval (show BitEnv from env2)
@@ -117,6 +117,13 @@ info: [FA(1: b2, b4, b3), HA(2: (((b2 ∧ b4) ∨ (b2 ∧ b3)) ∨ (b4 ∧ b3)),
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).2
+
+-- Compression ensuring preconditions holds, with evaluation using mod 2^w. Hence 9 mod 8 = 1.
+/--
+info: some 1
+-/
+#guard_msgs in
+#eval (applyChainSafe (NaiveCompression.naiveCompression multiColSmall).2 multiColSmall).map (fun h => h.evalMod (show BitEnv from env2))
 
 end NaiveCompressionExamples
 end BitHeap
