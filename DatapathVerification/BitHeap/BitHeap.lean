@@ -27,7 +27,7 @@ def eval (h : BitHeap) (env : BitEnv) : Int :=
   (h.columns.fold (init := 0) (fun acc w col => acc + (2 ^ w) * col.eval env))
 
 /--
-Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
+Evaluate a bit-heap modulo 2^width, to compute the final sum of all the bits in the heap.
 -/
 def evalMod (h : BitHeap) (env : BitEnv) : Int :=
   h.eval env % 2^(h.width)
