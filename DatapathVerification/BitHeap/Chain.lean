@@ -11,6 +11,11 @@ inductive Adder where
 | halfAdder (column : Nat) (a b : Circuit)
 | fullAdder (column : Nat) (a b c : Circuit)
 
+instance : ToString Adder where
+  toString
+    | .halfAdder c a b   => s!"HA({c}: {a}, {b})"
+    | .fullAdder c a b d => s!"FA({c}: {a}, {b}, {d})"
+
 /-- Apply an adder to a bit heap returning the updated heap -/
 def applyAdder (adder : Adder) (h : BitHeap) : BitHeap :=
   match adder with

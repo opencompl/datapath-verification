@@ -9,7 +9,22 @@ inductive Circuit
 | bit (varIndex : Nat)
 | binop (op : Binop) (a b : Circuit)
 | const (val : Bool)
-deriving Repr, DecidableEq, Inhabited, Hashable
+deriving DecidableEq, Inhabited, Hashable
+
+instance : ToString Binop where
+  toString
+    | .xor => "⊕"
+    | .and => "∧"
+    | .or  => "∨"
+    | .nand => "&"
+
+partial def Circuit.toStr : Circuit → String
+  | .bit n          => s!"b{n}"
+  | .const true     => "1"
+  | .const false    => "0"
+  | .binop op a b   => s!"({a.toStr} {toString op} {b.toStr})"
+
+instance : ToString Circuit := ⟨Circuit.toStr⟩
 
 namespace Circuit
 

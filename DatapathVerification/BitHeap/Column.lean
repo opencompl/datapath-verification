@@ -10,7 +10,10 @@ A column of a bit heap.
 -/
 structure Column where
   elems : Std.HashSet Circuit
-deriving Inhabited, Repr
+deriving Inhabited
+
+instance : ToString Column where
+  toString col := toString col.elems.toList
 
 namespace Column
 
@@ -38,6 +41,9 @@ def height (col : Column) : Nat :=
 
 @[simp]
 theorem height_eq_size (col : Column) : col.height = col.elems.size := rfl
+
+def toList (col : Column) : List Circuit :=
+  col.elems.toList
 
 end Column
 

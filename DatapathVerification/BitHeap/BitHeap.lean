@@ -3,18 +3,20 @@ import Std.Data.HashSet
 import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.Column
 
-instance [BEq α] [Hashable α] [Repr α] [Repr β] : Repr (Std.HashMap α β) where
-  reprPrec m _ := repr m.toList
-
 structure BitHeap where
   width : Nat
   columns : Std.HashMap Nat BitHeap.Column
-deriving Inhabited, Repr
+deriving Inhabited
 
 namespace BitHeap
 
 open Circuit
 open Column
+
+instance : ToString BitHeap where
+  toString h :=
+    let entries := h.columns.toList.mergeSort (fun a b => a.1 ≤ b.1)
+    "{" ++ String.intercalate ", " (entries.map (fun (k, v) => s!"{k} ↦ {v}")) ++ "}"
 
 def empty : BitHeap := ⟨0, Std.HashMap.emptyWithCapacity 0⟩
 
@@ -25,7 +27,7 @@ def eval (h : BitHeap) (env : BitEnv) : Int :=
   (h.columns.fold (init := 0) (fun acc w col => acc + (2 ^ w) * col.eval env))
 
 /--
-Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
+Evaluate a bit-heap modulo 2^width, to compute the final sum of all the bits in the heap.
 -/
 def evalMod (h : BitHeap) (env : BitEnv) : Int :=
   h.eval env % 2^(h.width)

@@ -1,4 +1,8 @@
 import DatapathVerification.BitHeap.BitHeap
-import DatapathVerification.BitHeap.Examples
+import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
 import DatapathVerification.BitHeap.Circuit
+import DatapathVerification.BitHeap.NaiveCompression
+import DatapathVerification.BitHeap.Examples.Examples
+import DatapathVerification.BitHeap.Examples.NaiveCompressionExamples
+import DatapathVerification.BitHeap.Examples.EvalModExamples
