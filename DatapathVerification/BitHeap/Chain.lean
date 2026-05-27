@@ -60,6 +60,26 @@ theorem applyChain_correct (steps : List Adder) (h : BitHeap)
       simp [applyAdder, fullAdder_correct, hwf]
     grind
 
+@[simp]
+theorem applyChain_preserves_width (steps : List Adder) (h : BitHeap) : (applyChain steps h).width = h.width := by
+  induction steps generalizing h with
+  | nil => rfl
+  | cons s rest ih =>
+    simp [applyChain]
+    cases s with
+    | halfAdder =>
+      simp [applyAdder, ih]
+    | fullAdder =>
+      simp [applyAdder, ih]
+
+theorem applyChain_correct_mod (steps : List Adder) (h : BitHeap)
+  (hwf : ChainPreconditions steps h) :
+  ∀ (env : BitEnv), (applyChain steps h).evalMod env = h.evalMod env := by
+  intros env
+  simp [evalMod]
+  rw [applyChain_correct]
+  grind
+
 /-- Check if a single step of the chain is applicable -/
 def isApplicable (step: Adder) (h : BitHeap) : Bool :=
   match step with
@@ -102,6 +122,36 @@ theorem applyChainSafe_correct (steps : List Adder) (h h' : BitHeap) (env : BitE
     | fullAdder =>
       obtain ⟨⟨⟨⟨⟨hi, hj⟩, hk⟩, hij⟩, hik⟩, hjk⟩ := hleft
       exact fullAdder_correct _ _ _ _ _ hi hj hk hij hik hjk env
+
+@[simp]
+theorem applyChainSafe_preserves_width (steps : List Adder) (h h' : BitHeap)
+    (heq : applyChainSafe steps h = some h') :
+    h'.width = h.width := by
+  induction steps generalizing h with
+  | nil =>
+    simp [applyChainSafe] at heq
+    rw [heq]
+  | cons s rest ih =>
+    simp [applyChainSafe] at heq
+    obtain ⟨hleft, hright⟩ := heq
+    have ih_applied := ih (applyAdder s h) hright
+    rw [ih_applied]
+    simp_all [applyAdder, isApplicable]
+    cases s with
+      simp at hleft
+    | halfAdder =>
+      obtain ⟨⟨i_in_col, j_in_col⟩, not_eq⟩ := hleft
+      rw [halfAdder_preserves_width _ _ _]
+    | fullAdder =>
+      obtain ⟨⟨⟨⟨⟨hi, hj⟩, hk⟩, hij⟩, hik⟩, hjk⟩ := hleft
+      rw [fullAdder_preserves_width _ _ _]
+
+theorem applyChainSafe_correct_mod (steps : List Adder) (h h' : BitHeap) (env : BitEnv)
+    (heq : applyChainSafe steps h = some h') :
+    h'.evalMod env = h.evalMod env := by
+  simp [evalMod]
+  rw [applyChainSafe_correct steps h h' env heq]
+  rw [applyChainSafe_preserves_width steps h h' heq]
 
 end Chain
 

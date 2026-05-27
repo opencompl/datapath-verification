@@ -4,6 +4,7 @@ import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.Column
 
 structure BitHeap where
+  width : Nat
   columns : Std.HashMap Nat BitHeap.Column
 deriving Inhabited
 
@@ -17,13 +18,19 @@ instance : ToString BitHeap where
     let entries := h.columns.toList.mergeSort (fun a b => a.1 ≤ b.1)
     "{" ++ String.intercalate ", " (entries.map (fun (k, v) => s!"{k} ↦ {v}")) ++ "}"
 
-def empty : BitHeap := ⟨Std.HashMap.emptyWithCapacity 0⟩
+def empty : BitHeap := ⟨0, Std.HashMap.emptyWithCapacity 0⟩
 
 /--
 Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
 def eval (h : BitHeap) (env : BitEnv) : Int :=
   (h.columns.fold (init := 0) (fun acc w col => acc + (2 ^ w) * col.eval env))
+
+/--
+Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
+-/
+def evalMod (h : BitHeap) (env : BitEnv) : Int :=
+  h.eval env % 2^(h.width)
 
 structure AdderResult where
   heap : BitHeap
@@ -38,7 +45,7 @@ instance : Membership Circuit BitHeap where
     ∃ (col : Nat), c ∈ h.get col
 
 def removeBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
-  ⟨h.columns.modify column (fun col => col.erase c)⟩
+  ⟨h.width, h.columns.modify column (fun col => col.erase c)⟩
 
 -- Maximum height across all columns
 def maxHeight (h : BitHeap) : Nat :=
@@ -58,7 +65,7 @@ partial def addBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
     let h := h.removeBit column c
     addBit (column + 1) c h
   else
-    ⟨h.columns.insert column (col.insert c)⟩
+    ⟨h.width, h.columns.insert column (col.insert c)⟩
 
 def halfAdder (column : Nat) (i j : Circuit) (h : BitHeap) : AdderResult :=
   let h := h.removeBit column i
@@ -110,6 +117,20 @@ theorem halfAdder_correct (column : Nat) (i j : Circuit) (h : BitHeap) (h1 : i �
   generalize hvj : j.eval env = vj
   rcases vi <;> rcases vj <;> grind
 
+-- TODO: Seems to me we need the termination proof of addBit first
+@[simp]
+theorem halfAdder_preserves_width (column : Nat) (i j : Circuit) (h : BitHeap) :
+    (h.halfAdder column i j).heap.width = h.width := by
+  simp [halfAdder, removeBit]
+  sorry
+
+theorem halfAdder_correct_mod (column : Nat) (i j : Circuit) (h : BitHeap)
+  (h1 : i ∈ h.get column) (h2 : j ∈ h.get column) (hne : i ≠ j) :
+  ∀ (env : BitEnv), (h.halfAdder column i j).heap.evalMod env = h.evalMod env := by
+  intros env
+  simp [evalMod]
+  rw [halfAdder_correct column i j h h1 h2 hne env]
+
 theorem fullAdder_correct (column : Nat) (i j k : Circuit) (h : BitHeap)
   (h1 : i ∈ h.get column) (h2 : j ∈ h.get column) (h3 : k ∈ h.get column) (hne : i ≠ j) (hne2 : i ≠ k) (hne3 : j ≠ k) :
   ∀ (env : BitEnv), (h.fullAdder column i j k).heap.eval env = h.eval env := by
@@ -122,5 +143,19 @@ theorem fullAdder_correct (column : Nat) (i j k : Circuit) (h : BitHeap)
   generalize hvj : j.eval env = vj
   generalize hvk : k.eval env = vk
   rcases vi <;> rcases vj <;> rcases vk <;> grind
+
+-- TODO: Seems to me we need the termination proof of addBit first
+@[simp]
+theorem fullAdder_preserves_width (column : Nat) (i j k : Circuit) (h : BitHeap) :
+    (h.fullAdder column i j k).heap.width = h.width := by
+  simp [fullAdder, removeBit]
+  sorry
+
+theorem fullAdder_correct_mod (column : Nat) (i j k : Circuit) (h : BitHeap)
+  (h1 : i ∈ h.get column) (h2 : j ∈ h.get column) (h3 : k ∈ h.get column) (hne : i ≠ j) (hne2 : i ≠ k) (hne3 : j ≠ k) :
+  ∀ (env : BitEnv), (h.fullAdder column i j k).heap.evalMod env = h.evalMod env := by
+  intros env
+  simp [evalMod]
+  rw [fullAdder_correct column i j k h h1 h2 h3 hne hne2 hne3 env]
 
 end BitHeap
