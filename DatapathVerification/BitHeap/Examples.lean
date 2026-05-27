@@ -17,7 +17,8 @@ def addBitsExample : BitHeap :=
   let h := h.removeBit 0 (Circuit.bit 0) -- remove the bit in column 0
   h
 /--
-info: { columns := [(0, { elems := Std.HashSet.ofList [] }),
+info: { width := 0,
+  columns := [(0, { elems := Std.HashSet.ofList [] }),
               (1, { elems := Std.HashSet.ofList [BitHeap.Circuit.bit 1] }),
               (2, { elems := Std.HashSet.ofList [BitHeap.Circuit.bit 1] })] }
 -/
