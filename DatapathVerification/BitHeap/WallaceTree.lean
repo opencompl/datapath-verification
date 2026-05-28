@@ -45,11 +45,12 @@ partial def WallaceRoundColumn (col : Nat) (h : BitHeap) (acc : BitHeap)
     | _ => (h, acc, [])
   else if accHeight == 3 then
     match (h.get col).toList with
-    | x :: y :: _ =>
-        let HA := Adder.halfAdder col x y
-        let newAcc := Chain.applyAdder HA acc -- applies a Half Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y -- removes the compressed bits from the original heap.
-        (newOriginal, newAcc, [HA])
+    | x :: y :: z :: _ =>
+        let FA := Adder.fullAdder col x y z
+        let newAcc := Chain.applyAdder FA acc -- applies a Full Adder, removing compressed bits and adding sum and carry bits to acc.
+        let newOriginal := h.removeBit col x |>.removeBit col y |>.removeBit col z -- removes the compressed bits from the original heap.
+        let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
+        (finalOriginal, finalAcc, FA :: adders)
     | _ => (h, acc, [])
   else
     (h, acc, [])
@@ -62,24 +63,25 @@ def WallaceRoundColumnNotPartial (col : Nat) (h : BitHeap) (acc : BitHeap)
     match _ : (h.get col).toList with
     | x :: y :: z :: _ =>
         let FA := Adder.fullAdder col x y z
-        let newAcc := Chain.applyAdder FA acc
-        let newOriginal := h.removeBit col x |>.removeBit col y |>.removeBit col z
-        let (finalOriginal, finalAcc, adders) := WallaceRoundColumnNotPartial col newOriginal newAcc
+        let newAcc := Chain.applyAdder FA acc -- applies a Full Adder, removing compressed bits and adding sum and carry bits to acc.
+        let newOriginal := h.removeBit col x |>.removeBit col y |>.removeBit col z -- removes the compressed bits from the original heap.
+        let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
         (finalOriginal, finalAcc, FA :: adders)
     | x :: y :: _ =>
         let HA := Adder.halfAdder col x y
-        let newAcc := Chain.applyAdder HA acc
-        let newOriginal := h.removeBit col x |>.removeBit col y
-        let (finalOriginal, finalAcc, adders) := WallaceRoundColumnNotPartial col newOriginal newAcc
+        let newAcc := Chain.applyAdder HA acc -- applies a Half Adder, removing compressed bits and adding sum and carry bits to acc.
+        let newOriginal := h.removeBit col x |>.removeBit col y -- removes the compressed bits from the original heap.
+        let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
         (finalOriginal, finalAcc, HA :: adders)
     | _ => (h, acc, [])
   else if accHeight == 3 then
     match (h.get col).toList with
-    | x :: y :: _ =>
-        let HA := Adder.halfAdder col x y
-        let newAcc := Chain.applyAdder HA acc
-        let newOriginal := h.removeBit col x |>.removeBit col y
-        (newOriginal, newAcc, [HA])
+    | x :: y :: z :: _ =>
+        let FA := Adder.fullAdder col x y z
+        let newAcc := Chain.applyAdder FA acc -- applies a Full Adder, removing compressed bits and adding sum and carry bits to acc.
+        let newOriginal := h.removeBit col x |>.removeBit col y |>.removeBit col z -- removes the compressed bits from the original heap.
+        let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
+        (finalOriginal, finalAcc, FA :: adders)
     | _ => (h, acc, [])
   else
     (h, acc, [])

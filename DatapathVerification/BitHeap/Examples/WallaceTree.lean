@@ -23,7 +23,7 @@ info: [1, 2, 3, 4, 3, 2, 1]
 ------------- First Wallace round -------------
 
 /--
-info: [1, 2, 2, 3, 2, 2, 2]
+info: [1, 2, 1, 3, 2, 3, 1]
 -/
 #guard_msgs in
 #eval (List.range 7).map (fun c => ((WallaceTree.WallaceRound pp4).1.get c).height)
@@ -32,7 +32,7 @@ info: [1, 2, 2, 3, 2, 2, 2]
 
 -- Number of adders produced in this round.
 /--
-info: 4
+info: 3
 -/
 #guard_msgs in
 #eval (WallaceTree.WallaceRound pp4).2.length
@@ -41,15 +41,16 @@ info: 4
 
 -- Total adders in the full reduction.
 /--
-info: 8
+info: 6
 -/
 #guard_msgs in
 #eval (WallaceTree.WallaceTree pp4).2.length
 
+
 #eval (WallaceTree.WallaceTree pp4).2
 
 /--
-info: [1, 2, 2, 2, 2, 2, 2, 1]
+info: [1, 2, 1, 1, 1, 2, 2, 0]
 -/
 #guard_msgs in
 #eval (List.range 8).map (fun c => ((WallaceTree.WallaceTree pp4).1.get c).height)
