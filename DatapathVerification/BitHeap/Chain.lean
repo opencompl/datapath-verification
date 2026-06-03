@@ -16,6 +16,17 @@ instance : ToString Adder where
     | .halfAdder c a b   => s!"HA({c}: {a}, {b})"
     | .fullAdder c a b d => s!"FA({c}: {a}, {b}, {d})"
 
+def countAdders (adders : List Adder) : Nat × Nat :=
+  adders.foldl (fun (fa, ha) adder =>
+    match adder with
+    | .fullAdder .. => (fa + 1, ha)
+    | .halfAdder .. => (fa, ha + 1)) (0, 0)
+
+/-- Print a chain of adders, printing FAs and HAs separately -/
+def printSummary (adders : List Adder) : String :=
+  let (fa, ha) := countAdders adders
+  s!"FAs: {fa}, HAs: {ha}"
+
 /-- Apply an adder to a bit heap returning the updated heap -/
 def applyAdder (adder : Adder) (h : BitHeap) : BitHeap :=
   match adder with

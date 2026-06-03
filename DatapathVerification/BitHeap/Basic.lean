@@ -3,6 +3,11 @@ import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
 import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.NaiveCompression
+import DatapathVerification.BitHeap.DaddaTree
+import DatapathVerification.BitHeap.WallaceTree
 import DatapathVerification.BitHeap.Examples.Examples
 import DatapathVerification.BitHeap.Examples.NaiveCompressionExamples
 import DatapathVerification.BitHeap.Examples.EvalModExamples
+import DatapathVerification.BitHeap.Examples.PartialProductGenerator
+import DatapathVerification.BitHeap.Examples.WallaceTree
+import DatapathVerification.BitHeap.Examples.DaddaTree
