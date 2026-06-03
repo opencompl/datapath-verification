@@ -1,3 +1,21 @@
+/-
+Dadda's algorithm:
+
+Input: A bit heap with maximum column height ℎ.
+Output: A two-row bit heap.
+
+(1) Compute the smallest 𝐿 such that 𝑚𝐿 ≥ ℎ, where the Dadda sequence is
+given by 𝑚0 = 2 and 𝑚𝑙 = ⌊3/2 mₗ₋₁⌋.
+
+(2) Starting at level 𝑙 = 𝐿, scan all columns from least-significant bit (LSB) to most-
+significant bit (MSB). For each column whose height exceeds mₗ₋₁, introduce the
+fewest number of FAs and at most one HA to bring the height down to mₗ₋₁. Carry
+outputs are added to the next column, but should be left uncompressed until the
+following level.
+
+(3) Decrement 𝑙 and repeat until every column has height at most 2.
+-/
+
 import DatapathVerification.BitHeap.BitHeap
 import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
