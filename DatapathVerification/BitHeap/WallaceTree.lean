@@ -1,6 +1,7 @@
 import DatapathVerification.BitHeap.BitHeap
 import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
+import DatapathVerification.BitHeap.CompressionHelpers
 import Std.Data.HashSet
 
 open BitHeap
@@ -29,15 +30,11 @@ partial def WallaceRoundColumn (col : Nat) (h : BitHeap) (acc : BitHeap)
     : BitHeap × BitHeap × List Adder :=
   match (h.get col).toList with
     | x :: y :: z :: _ =>
-        let FA := Adder.fullAdder col x y z
-        let newAcc := Chain.applyAdder FA acc -- applies a Full Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y |>.removeBit col z -- removes the compressed bits from the original heap.
+        let ⟨newOriginal, newAcc, FA⟩ := Compression.applyFullAdder col x y z h acc
         let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
         (finalOriginal, finalAcc, FA :: adders)
     | x :: y :: [] =>
-        let HA := Adder.halfAdder col x y
-        let newAcc := Chain.applyAdder HA acc -- applies a Half Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y -- removes the compressed bits from the original heap.
+        let ⟨newOriginal, newAcc, HA⟩ := Compression.applyHalfAdder col x y h acc
         let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
         (finalOriginal, finalAcc, HA :: adders)
     | _ => (h, acc, [])
@@ -47,15 +44,11 @@ def WallaceRoundColumnNotPartial (col : Nat) (h : BitHeap) (acc : BitHeap)
     : BitHeap × BitHeap × List Adder :=
   match (h.get col).toList with
     | x :: y :: z :: _ =>
-        let FA := Adder.fullAdder col x y z
-        let newAcc := Chain.applyAdder FA acc -- applies a Full Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y |>.removeBit col z -- removes the compressed bits from the original heap.
+        let ⟨newOriginal, newAcc, FA⟩ := Compression.applyFullAdder col x y z h acc
         let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
         (finalOriginal, finalAcc, FA :: adders)
     | x :: y :: [] =>
-        let HA := Adder.halfAdder col x y
-        let newAcc := Chain.applyAdder HA acc -- applies a Half Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y -- removes the compressed bits from the original heap.
+        let ⟨newOriginal, newAcc, HA⟩ := Compression.applyHalfAdder col x y h acc
         let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
         (finalOriginal, finalAcc, HA :: adders)
     | _ => (h, acc, [])

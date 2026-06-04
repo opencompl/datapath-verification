@@ -1,6 +1,7 @@
 import DatapathVerification.BitHeap.BitHeap
 import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
+import DatapathVerification.BitHeap.CompressionHelpers
 import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.NaiveCompression
 import DatapathVerification.BitHeap.DaddaTree

@@ -19,6 +19,7 @@ following level.
 import DatapathVerification.BitHeap.BitHeap
 import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
+import DatapathVerification.BitHeap.CompressionHelpers
 import Std.Data.HashSet
 
 open BitHeap
@@ -29,7 +30,7 @@ namespace DaddaTree
 
 /--
 Dadda Sequence recursively computed by mₗ = ⌊1.5mₗ₋₁⌋ with m₀ = 2.
-Floor division is ensured from Nat division.
+Floor division is ensured by Nat division.
 -/
 def DaddaSequence : Nat → Nat
   | 0 => 2
@@ -75,9 +76,7 @@ partial def DaddaRoundColumn (col : Nat) (h : BitHeap) (acc : BitHeap) (daddaLev
     -- If the column height is exactly one more than the previous Dadda level, apply a Half Adder to compress it.
     match (h.get col).toList with
     | x :: y :: _ =>
-        let HA := Adder.halfAdder col x y
-        let newAcc := Chain.applyAdder HA acc -- applies a Half Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y -- removes the compressed bits from the original heap.
+        let ⟨newOriginal, newAcc, HA⟩ := Compression.applyHalfAdder col x y h acc
         let (finalOriginal, finalAcc, adders) := DaddaRoundColumn col newOriginal newAcc daddaLevel
         (finalOriginal, finalAcc, HA :: adders)
     | _ => (h, acc, [])
@@ -85,9 +84,7 @@ partial def DaddaRoundColumn (col : Nat) (h : BitHeap) (acc : BitHeap) (daddaLev
     -- If the column height is more than one above the previous Dadda level, apply a Full Adder to compress it.
     match (h.get col).toList with
     | x :: y :: z :: _ =>
-      let FA := Adder.fullAdder col x y z
-      let newAcc := Chain.applyAdder FA acc -- applies a Full Adder, removing compressed bits and adding sum and carry bits to acc.
-      let newOriginal := h.removeBit col x |>.removeBit col y |>.removeBit col z -- removes the compressed bits from the original heap.
+      let ⟨newOriginal, newAcc, FA⟩ := Compression.applyFullAdder col x y z h acc
       let (finalOriginal, finalAcc, adders) := DaddaRoundColumn col newOriginal newAcc daddaLevel
       (finalOriginal, finalAcc, FA :: adders)
     | _ => (h, acc, [])
