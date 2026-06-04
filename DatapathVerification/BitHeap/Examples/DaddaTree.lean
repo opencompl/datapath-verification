@@ -35,19 +35,19 @@ abbrev BitEnv := Nat → Bool
 def pp4 : BitHeap := bitHeapOfPartialProducts 4
 def pp8 : BitHeap := bitHeapOfPartialProducts 8
 
-------------- First Dadda round -------------
+------------- First Dadda stage -------------
 
 /--
 info: [1, 2, 3, 3, 3, 3, 1]
 -/
 #guard_msgs in
-#eval (List.range 7).map (fun c => ((DaddaTree.DaddaRound pp4 2).1.get c).height)
+#eval (List.range 7).map (fun c => ((DaddaTree.DaddaStage pp4 2).1.get c).height)
 
 /--
 info: [HA(3: b9, b6), HA(4: b10, b13)]
 -/
 #guard_msgs in
-#eval (DaddaTree.DaddaRound pp4 2).2
+#eval (DaddaTree.DaddaStage pp4 2).2
 
 /--
 info: (some {0 ↦ [b0], 1 ↦ [b1, b4], 2 ↦ [(b2 ⊕ b5), b8], 3 ↦ [((b3 ⊕ b12) ⊕ (b9 ⊕ b6)), (b2 ∧ b5)], 4 ↦ [(((b3 ∧ b12) ∨ (b3 ∧ (b9 ⊕ b6))) ∨ (b12 ∧ (b9 ⊕ b6))), ((b7 ⊕ (b10 ⊕ b13)) ⊕ (b9 ∧ b6))], 5 ↦ [(((b7 ∧ (b10 ⊕ b13)) ∨ (b7 ∧ (b9 ∧ b6))) ∨ ((b10 ⊕ b13) ∧ (b9 ∧ b6))), ((b14 ⊕ b11) ⊕ (b10 ∧ b13))], 6 ↦ [b15, (((b14 ∧ b11) ∨ (b14 ∧ (b10 ∧ b13))) ∨ (b11 ∧ (b10 ∧ b13)))]})-/

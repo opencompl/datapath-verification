@@ -4,8 +4,8 @@ Dadda's algorithm:
 Input: A bit heap with maximum column height ℎ.
 Output: A two-row bit heap.
 
-(1) Compute the smallest 𝐿 such that 𝑚𝐿 ≥ ℎ, where the Dadda sequence is
-given by 𝑚0 = 2 and 𝑚𝑙 = ⌊3/2 mₗ₋₁⌋.
+(1) Compute the smallest 𝐿 such that 𝑚ₗ ≥ ℎ, where the Dadda sequence is
+given by 𝑚0 = 2 and 𝑚ₗ = ⌊3/2 mₗ₋₁⌋.
 
 (2) Starting at level 𝑙 = 𝐿, scan all columns from least-significant bit (LSB) to most-
 significant bit (MSB). For each column whose height exceeds mₗ₋₁, introduce the
@@ -69,38 +69,38 @@ the updated accumulator, and the list of adders used to compress the column.
 For each column whose height exceeds mₗ₋₁, introduces the
 fewest number of FAs and at most one HA to bring the height down to mₗ₋₁.
 -/
-partial def DaddaRoundColumn (col : Nat) (h : BitHeap) (acc : BitHeap) (daddaLevel : Nat)
+partial def DaddaStageColumn (col : Nat) (h : BitHeap) (acc : BitHeap) (daddaLevel : Nat)
     : BitHeap × BitHeap × List Adder :=
-  let DaddaHeightPrev := DaddaSequence (daddaLevel - 1) -- mₗ₋₁ is the maximum height allowed in the column after this round of compression.
-  if (acc.get col).height - DaddaHeightPrev = 1 then
-    -- If the column height is exactly one more than the previous Dadda level, apply a Half Adder to compress it.
-    match (h.get col).toList with
-    | x :: y :: _ =>
-        let ⟨newOriginal, newAcc, HA⟩ := Compression.applyHalfAdder col x y h acc
-        let (finalOriginal, finalAcc, adders) := DaddaRoundColumn col newOriginal newAcc daddaLevel
-        (finalOriginal, finalAcc, HA :: adders)
-    | _ => (h, acc, [])
-  else if (acc.get col).height - DaddaHeightPrev ≥ 2 then
+  let DaddaHeightPrev := DaddaSequence (daddaLevel - 1) -- mₗ₋₁ is the maximum height allowed in the column after this stage of compression.
+  if (acc.get col).height - DaddaHeightPrev ≥ 2 then
     -- If the column height is more than one above the previous Dadda level, apply a Full Adder to compress it.
     match (h.get col).toList with
     | x :: y :: z :: _ =>
       let ⟨newOriginal, newAcc, FA⟩ := Compression.applyFullAdder col x y z h acc
-      let (finalOriginal, finalAcc, adders) := DaddaRoundColumn col newOriginal newAcc daddaLevel
+      let (finalOriginal, finalAcc, adders) := DaddaStageColumn col newOriginal newAcc daddaLevel
       (finalOriginal, finalAcc, FA :: adders)
+    | _ => (h, acc, [])
+    else if (acc.get col).height - DaddaHeightPrev = 1 then
+    -- If the column height is exactly one more than the previous Dadda level, apply a Half Adder to compress it.
+    match (h.get col).toList with
+    | x :: y :: _ =>
+        let ⟨newOriginal, newAcc, HA⟩ := Compression.applyHalfAdder col x y h acc
+        let (finalOriginal, finalAcc, adders) := DaddaStageColumn col newOriginal newAcc daddaLevel
+        (finalOriginal, finalAcc, HA :: adders)
     | _ => (h, acc, [])
   else (h, acc, []) -- If the column height is less than or equal to the previous Dadda level, do nothing.
 
 /--
-One full round of Dadda tree across all columns of the bit heap.
+One full stage of Dadda tree across all columns of the bit heap.
 
-Loops over every column in order, invoking DaddaRoundColumn to compress each
+Loops over every column in order, invoking DaddaStageColumn to compress each
 one and folding the resulting adders into a running list.
 -/
-partial def DaddaRound (h : BitHeap) (daddaLevel : Nat) : BitHeap × List Adder :=
+partial def DaddaStage (h : BitHeap) (daddaLevel : Nat) : BitHeap × List Adder :=
   let (_, acc, adders) :=
   (List.range h.columns.size).foldl
     (fun (original, acc, adders) col =>
-      let (original', acc', newAdders) := DaddaRoundColumn col original acc daddaLevel
+      let (original', acc', newAdders) := DaddaStageColumn col original acc daddaLevel
       -- Return modified original heap (with removal of compressed bits, but without adding carries to the columns),
       -- accumulated BitHeap, and append newAdders to the adders list.
       (original', acc', adders ++ newAdders))
@@ -110,15 +110,15 @@ partial def DaddaRound (h : BitHeap) (daddaLevel : Nat) : BitHeap × List Adder 
 /--
 Top-level Dadda Tree function.
 
-Repeatedly applies DaddaRound until every column has at most 2 bits.
+Repeatedly applies DaddaStage until every column has at most 2 bits.
 -/
 partial def DaddaTree (h : BitHeap) : BitHeap × List Adder :=
   let daddaLevel := findDaddaLevel h.maxHeight
   let rec loop (h : BitHeap) (adders : List Adder) (daddaLevel : Nat) : BitHeap × List Adder :=
     if h.maxHeight ≤ 2 then (h, adders)
     else
-      let (h', newAdders) := DaddaRound h daddaLevel
-      loop h' (adders ++ newAdders) (daddaLevel - 1) -- Decrement the Dadda level for the next round.
+      let (h', newAdders) := DaddaStage h daddaLevel
+      loop h' (adders ++ newAdders) (daddaLevel - 1) -- Decrement the Dadda level for the next stage.
   loop h [] daddaLevel
 
 end DaddaTree
