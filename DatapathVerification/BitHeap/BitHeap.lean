@@ -72,13 +72,11 @@ Width-aware addBit. Stops carrying when the column exceeds the width of the bit 
 TODO: This will replace addBit gradually.
 -/
 def addBit' (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
-  if column > h.width then h else
+  if column >= h.width then h else
   let col := h.columns.getD column (Column.empty)
   if !col.contains c then
     ⟨h.width, h.columns.insert column (col.insert c)⟩
-  else if column + 1 ≤ h.width then
-    addBit' (column + 1) c (h.removeBit column c)
-  else h
+  else  addBit' (column + 1) c (h.removeBit column c)
   termination_by h.width - column
   decreasing_by
     have hw : (removeBit column c h).width = h.width := by rfl
