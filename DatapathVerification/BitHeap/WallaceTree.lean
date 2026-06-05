@@ -1,6 +1,7 @@
 import DatapathVerification.BitHeap.BitHeap
 import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
+import DatapathVerification.BitHeap.CompressionHelpers
 import Std.Data.HashSet
 
 open BitHeap
@@ -16,7 +17,7 @@ Given the original bit heap `h` and an accumulator `acc` (which holds the bits
 already produced by carries from previous compressions), returns the reduced original heap,
 the updated accumulator, and the list of adders used to compress the column.
 
-See comments of WallaceRound to understand the separation of `h` and `acc`.
+See comments of WallaceStage to understand the separation of `h` and `acc`.
 
 If acc.get col has ≥ 4 bits and the original column has ≥ 3 bits, a full adder
   is inserted (consuming three bits from h, producing a sum bit in acc[col]
@@ -25,38 +26,30 @@ If acc.get col has ≥ 4 bits but the original column has only 2 bits left,
   a half adder is used instead. This is because we cannot consume newly added bits, so we only consume the original bits in the column.
 If acc.get col has exactly 3 bits, a single half adder is applied and we stop.
 -/
-partial def WallaceRoundColumn (col : Nat) (h : BitHeap) (acc : BitHeap)
+partial def WallaceStageColumn (col : Nat) (h : BitHeap) (acc : BitHeap)
     : BitHeap × BitHeap × List Adder :=
   match (h.get col).toList with
     | x :: y :: z :: _ =>
-        let FA := Adder.fullAdder col x y z
-        let newAcc := Chain.applyAdder FA acc -- applies a Full Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y |>.removeBit col z -- removes the compressed bits from the original heap.
-        let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
+        let ⟨newOriginal, newAcc, FA⟩ := Compression.applyFullAdder col x y z h acc
+        let (finalOriginal, finalAcc, adders) := WallaceStageColumn col newOriginal newAcc
         (finalOriginal, finalAcc, FA :: adders)
     | x :: y :: [] =>
-        let HA := Adder.halfAdder col x y
-        let newAcc := Chain.applyAdder HA acc -- applies a Half Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y -- removes the compressed bits from the original heap.
-        let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
+        let ⟨newOriginal, newAcc, HA⟩ := Compression.applyHalfAdder col x y h acc
+        let (finalOriginal, finalAcc, adders) := WallaceStageColumn col newOriginal newAcc
         (finalOriginal, finalAcc, HA :: adders)
     | _ => (h, acc, [])
 
--- TODO: This is the same function as WallaceRoundColumn, with incomplete termination proof.
-def WallaceRoundColumnNotPartial (col : Nat) (h : BitHeap) (acc : BitHeap)
+-- TODO: This is the same function as WallaceStageColumn, with incomplete termination proof.
+def WallaceStageColumnNotPartial (col : Nat) (h : BitHeap) (acc : BitHeap)
     : BitHeap × BitHeap × List Adder :=
   match (h.get col).toList with
     | x :: y :: z :: _ =>
-        let FA := Adder.fullAdder col x y z
-        let newAcc := Chain.applyAdder FA acc -- applies a Full Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y |>.removeBit col z -- removes the compressed bits from the original heap.
-        let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
+        let ⟨newOriginal, newAcc, FA⟩ := Compression.applyFullAdder col x y z h acc
+        let (finalOriginal, finalAcc, adders) := WallaceStageColumn col newOriginal newAcc
         (finalOriginal, finalAcc, FA :: adders)
     | x :: y :: [] =>
-        let HA := Adder.halfAdder col x y
-        let newAcc := Chain.applyAdder HA acc -- applies a Half Adder, removing compressed bits and adding sum and carry bits to acc.
-        let newOriginal := h.removeBit col x |>.removeBit col y -- removes the compressed bits from the original heap.
-        let (finalOriginal, finalAcc, adders) := WallaceRoundColumn col newOriginal newAcc
+        let ⟨newOriginal, newAcc, HA⟩ := Compression.applyHalfAdder col x y h acc
+        let (finalOriginal, finalAcc, adders) := WallaceStageColumn col newOriginal newAcc
         (finalOriginal, finalAcc, HA :: adders)
     | _ => (h, acc, [])
   termination_by (h.get col).height
@@ -80,22 +73,22 @@ def WallaceRoundColumnNotPartial (col : Nat) (h : BitHeap) (acc : BitHeap)
 
 
 /--
-One full round of Wallace tree across all columns of the bit heap.
+One full stage of Wallace tree across all columns of the bit heap.
 
-Loops over every column in order, invoking WallaceRoundColumn to compress each
+Loops over every column in order, invoking WallaceStageColumn to compress each
 one and folding the resulting adders into a running list.
 
 The accumulator (acc : BitHeap) starts as a copy of the original BitHeap h.
 Carries generated during compression are added only to acc, while the
 compressed bits are removed from both acc and h (original heap).
 This separation lets us track which bits are carries, since
-generated carry bits contribute to the height calculation but are not themselves compressed in the same round.
+generated carry bits contribute to the height calculation but are not themselves compressed in the same stage.
 -/
-def WallaceRound (h : BitHeap) : BitHeap × List Adder :=
+def WallaceStage (h : BitHeap) : BitHeap × List Adder :=
   let (_, acc, adders) :=
   (List.range h.columns.size).foldl
     (fun (original, acc, adders) col =>
-      let (original', acc', newAdders) := WallaceRoundColumn col original acc
+      let (original', acc', newAdders) := WallaceStageColumn col original acc
       -- Return modified original heap (with removal of compressed bits, but without adding carries to the columns),
       -- accumulated BitHeap, and append newAdders to the adders list.
       (original', acc', adders ++ newAdders))
@@ -105,12 +98,12 @@ def WallaceRound (h : BitHeap) : BitHeap × List Adder :=
 /--
 Top-level Wallace Tree function.
 
-Repeatedly applies WallaceRound until every column has at most 2 bits.
+Repeatedly applies WallaceStage until every column has at most 2 bits.
 -/
 partial def WallaceTree (h : BitHeap) : BitHeap × List Adder :=
     if h.maxHeight ≤ 2 then
     (h, [])
   else
-    let (h', adders) := WallaceRound h
+    let (h', adders) := WallaceStage h
     let (h'', moreAdders) := WallaceTree h'
     (h'', adders ++ moreAdders)

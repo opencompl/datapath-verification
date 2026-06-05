@@ -20,22 +20,22 @@ info: [1, 2, 3, 4, 3, 2, 1]
 #guard_msgs in
 #eval (List.range 7).map (fun c => (pp4.get c).height)
 
-------------- First Wallace round -------------
+------------- First Wallace stage -------------
 
 /--
 info: [1, 1, 2, 3, 2, 2, 2]
 -/
 #guard_msgs in
-#eval (List.range 7).map (fun c => ((WallaceTree.WallaceRound pp4).1.get c).height)
+#eval (List.range 7).map (fun c => ((WallaceTree.WallaceStage pp4).1.get c).height)
 
-#eval (WallaceTree.WallaceRound pp4).2
+#eval (WallaceTree.WallaceStage pp4).2
 
--- Number of adders produced in this round.
+-- Number of adders produced in this stage.
 /--
 info: 5
 -/
 #guard_msgs in
-#eval (WallaceTree.WallaceRound pp4).2.length
+#eval (WallaceTree.WallaceStage pp4).2.length
 
 
 def env2 : BitEnv := fun n => n = 0 || n = 2 || n = 5 || n = 6
