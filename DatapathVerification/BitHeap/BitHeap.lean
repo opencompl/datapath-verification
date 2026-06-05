@@ -67,6 +67,27 @@ partial def addBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
   else
     ⟨h.width, h.columns.insert column (col.insert c)⟩
 
+/--
+Width-aware addBit. Stops carrying when the column exceeds the width of the bit heap.
+TODO: This will replace addBit gradually.
+-/
+def addBit' (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
+  let col := h.columns.getD column (Column.empty)
+    if col.contains c then
+      if column + 1 ≤ h.width then
+        let h := h.removeBit column c
+        addBit' (column + 1) c h
+      else
+        h
+    else
+      ⟨h.width, h.columns.insert column (col.insert c)⟩
+  termination_by h.width - column
+  decreasing_by
+    rename_i h0 _ _
+    have hw : (removeBit column c h0).width = h0.width := by rfl
+    rw [hw]
+    omega
+
 def halfAdder (column : Nat) (i j : Circuit) (h : BitHeap) : AdderResult :=
   let h := h.removeBit column i
   let h := h.removeBit column j
