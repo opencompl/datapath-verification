@@ -64,7 +64,7 @@ Stops carrying when the column exceeds the width of the bit heap.
 -/
 def addBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
   if column >= h.width then h else
-  let col := h.columns.getD column (Column.empty)
+  let col := h.get column
   if !col.contains c then
     ⟨h.width, h.columns.insert column (col.insert c)⟩
   else  addBit (column + 1) c (h.removeBit column c)
@@ -113,38 +113,66 @@ theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap) (env :
   unfold evalMod
   rw [removeBit_width]
   simp [eval, removeBit]
+  have : (h.get column |>.erase c).eval env = (h.get column).eval env - 2 ^ column * (c.eval env).toInt := by
+    sorry
+
+  -- have : (h.columns.modify column fun col => col.erase c)  = h.columns - 2 ^ column * (c.eval env).toInt := by sorry
   sorry
+
+theorem by_pow2_of_zero_eval (h : BitHeap) (h1 : col ≥ h.width) :
+  (2 : Int) ^ h.width ∣ (2 : Int) ^ col := by
+  sorry
+  -- exact Nat.pow_dvd_pow_iff_le_right'.mpr h1 -> this works for Nat.
 
 @[simp]
 theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap) (env : BitEnv) :
     (h.addBit column c).evalMod env = (h.evalMod env +  2^column  * (c.eval env).toInt) % 2^(h.width) := by
-  by_cases hcol : column >= h.width
-  · simp only [evalMod, addBit_width]
-    have h3 : 2 ^ column * (c.eval env).toInt % 2 ^ h.width = 0 := by
+  fun_induction addBit with
+  | case1 col h h1 =>
+    simp [evalMod]
+    have h3 : 2 ^ col * (c.eval env).toInt % 2 ^ h.width = 0 := by
       generalize hvi : c.eval env = vi
       rcases vi
       · simp
-      · sorry
-    rw [Int.add_emod]
-    simp [h3]
-    unfold addBit
-    split_ifs
-    rfl
-  · simp only [evalMod, addBit_width]
-    unfold addBit
-    split_ifs
-    · sorry
+      · simp only [Bool.toInt_true]
+        rw [Int.mul_one]
+        apply Int.emod_eq_zero_of_dvd
+        exact_mod_cast by_pow2_of_zero_eval h h1
+    simp [Int.add_emod, h3]
+  | case2 col h h1 =>
+    simp only [evalMod, Int.emod_add_emod]
+    have h3 : (⟨h.width, h.columns.insert col ((h.get col).insert c)⟩ : BitHeap).eval env = h.eval env + 2 ^ col * (c.eval env).toInt := by
+      simp [eval]
+      sorry
+    rw [h3]
+  | case3 _ _ _ h2 h1 ih =>
+    simp only [ih, removeBit_width]
+    rw [evalMod_heap_removeBit]
+    · simp only [Int.emod_add_emod]
+      grind
+    · simp at h1
+      simp [mem_iff_contains]
+      grind
+
+theorem th (m : Std.DHashMap Nat (fun _ => Column)) (k : Nat) (f : Column → Column) :
+    Std.DHashMap.Const.get? (Std.DHashMap.Const.modify m k f) k
+      = (Std.DHashMap.Const.get? m k).map f := by
+  exact Std.DHashMap.Const.get?_modify_self
 
 @[simp]
 theorem get_removeBit_of_ne (column : Nat) (h : BitHeap) (i j : Circuit)
   (h1 : i ∈ h.get column) (hne : i ≠ j) :
   i ∈ (removeBit column j h).get column := by
-  simp [removeBit]
+  simp only [removeBit, mem_iff_contains]
+  unfold Std.HashMap.modify
+  simp [get]
+
   sorry
 
 theorem removeBit_decreases_size (col : Nat) (c : Circuit) (h : BitHeap) (h1: c ∈ h.get col) :
     ((removeBit col c h).get col).height < (h.get col).height := by
-  simp [removeBit]
+  simp only [removeBit, height_eq_size]
+  simp [erase]
   sorry
 
 theorem double_removeBit_decreases (col : Nat) (c₁ c₂ : Circuit) (h : BitHeap)
@@ -172,31 +200,6 @@ theorem triple_removeBit_decreases (col : Nat) (c₁ c₂ c₃ : Circuit) (h : B
 theorem halfAdder_preserves_width (column : Nat) (i j : Circuit) (h : BitHeap) :
     (h.halfAdder column i j).heap.width = h.width := by
   simp [halfAdder, removeBit]
-
-theorem by_pow2_of_zero_eval (h : BitHeap) (h1 : col ≥ h.width) :
-  (2 : Int) ^ h.width ∣ (2 : Int) ^ col := by
-  sorry
-  -- exact Nat.pow_dvd_pow_iff_le_right'.mpr h1 -> this works for Nat.
-
-@[simp]
-theorem evalMod_heap_addBit' (column : Nat) (c : Circuit) (h : BitHeap) (env : BitEnv) :
-    (h.addBit column c).evalMod env = (h.evalMod env +  2^column  * (c.eval env).toInt) % 2^(h.width) := by
-  fun_induction addBit with
-  | case1 col h h1 =>
-    simp [evalMod]
-    have h3 : 2 ^ col * (c.eval env).toInt % 2 ^ h.width = 0 := by
-      generalize hvi : c.eval env = vi
-      rcases vi
-      · simp
-      · simp only [Bool.toInt_true]
-        rw [Int.mul_one]
-        apply Int.emod_eq_zero_of_dvd
-        exact_mod_cast by_pow2_of_zero_eval h h1
-    simp [Int.add_emod, h3]
-  | case2 col h h1 =>
-    simp [evalMod]
-    sorry
-  | case3 _ _ _ _ _ ih => sorry
 
 theorem halfAdder_correct_mod (column : Nat) (i j : Circuit) (h : BitHeap)
   (h1 : i ∈ h.get column) (h2 : j ∈ h.get column) (hne : i ≠ j) :

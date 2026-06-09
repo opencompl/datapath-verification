@@ -23,6 +23,10 @@ def contains (col : Column) (c : Circuit) : Bool :=
 instance : Membership Circuit Column where
   mem col c := c ∈ col.elems
 
+@[simp]
+theorem mem_iff_contains (col : Column) (c : Circuit) : c ∈ col ↔ col.contains c := by
+  rfl
+
 def empty : Column := ⟨Std.HashSet.emptyWithCapacity 0⟩
 
 def eval (col : Column) (env : BitEnv) : Nat :=
@@ -44,6 +48,18 @@ theorem height_eq_size (col : Column) : col.height = col.elems.size := rfl
 
 def toList (col : Column) : List Circuit :=
   col.elems.toList
+
+@[simp]
+theorem eval_erase (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :
+    (col.erase c).eval env = col.eval env - (c.eval env).toInt := by
+  simp [eval, erase]
+  sorry
+
+@[simp]
+theorem eval_insert (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :
+    (col.insert c).eval env = col.eval env + (c.eval env).toInt := by
+  simp [eval, insert]
+  sorry
 
 end Column
 
