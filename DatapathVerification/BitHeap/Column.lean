@@ -56,7 +56,7 @@ theorem eval_erase (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :
   sorry
 
 @[simp]
-theorem eval_insert (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :
+theorem eval_insert (col : Column) (c : Circuit) (env : BitEnv) (h : c ∉ col) :
     (col.insert c).eval env = col.eval env + (c.eval env).toInt := by
   simp [eval, insert]
   sorry

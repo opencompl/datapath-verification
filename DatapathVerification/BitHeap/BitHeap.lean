@@ -3,6 +3,8 @@ import Std.Data.HashSet
 import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.Column
 import Mathlib.Tactic.SplitIfs
+import Std.Data.HashMap.Lemmas
+import Std.Tactic.Do
 
 structure BitHeap where
   width : Nat
@@ -27,6 +29,12 @@ Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 def eval (h : BitHeap) (env : BitEnv) : Int :=
   (h.columns.fold (init := 0) (fun acc w col => acc + (2 ^ w) * col.eval env))
 
+def eval' (h : BitHeap) (env : BitEnv) : Int := Id.run do
+  let mut acc := 0
+  for (col, val) in h.columns do
+    acc := acc + (2 ^ col) * val.eval env
+  return acc
+
 /--
 Evaluate a bit-heap modulo 2^width, to compute the final sum of all the bits in the heap.
 -/
@@ -40,6 +48,10 @@ structure AdderResult where
 
 def get (h : BitHeap) (column : Nat) : Column :=
   h.columns.getD column (Column.empty)
+
+theorem get_eq_getD (h : BitHeap) (column : Nat) :
+    h.get column = (h.columns[column]?).getD Column.empty := by
+  simp [get, Std.HashMap.getD_eq_getD_getElem?]
 
 instance : Membership Circuit BitHeap where
   mem h c :=
@@ -115,14 +127,79 @@ theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap) (env :
   simp [eval, removeBit]
   have : (h.get column |>.erase c).eval env = (h.get column).eval env - 2 ^ column * (c.eval env).toInt := by
     sorry
-
   -- have : (h.columns.modify column fun col => col.erase c)  = h.columns - 2 ^ column * (c.eval env).toInt := by sorry
+  repeat rw [Std.HashMap.fold_eq_foldl_toList]
   sorry
 
 theorem by_pow2_of_zero_eval (h : BitHeap) (h1 : col ≥ h.width) :
   (2 : Int) ^ h.width ∣ (2 : Int) ^ col := by
   sorry
   -- exact Nat.pow_dvd_pow_iff_le_right'.mpr h1 -> this works for Nat.
+
+/--
+Relate BitHeap.env to sum of a list. (Nat x Column) comes from Std.HashMap.toList, since it returns (Key x Value) pairs.
+-/
+theorem foldl_sum (l : List (Nat × Column)) (env : BitEnv) (a : Int) :
+  l.foldl (fun acc (p : Nat × Column) => acc + 2 ^ p.1 * (p.2.eval env : Int)) a =
+    a + (l.map (fun p => 2 ^ p.1 * (p.2.eval env : Int))).sum := by
+  induction l generalizing a with
+  | nil => simp
+  | cons p ps ih =>
+    grind
+
+@[grind => ]
+theorem eval_insertColumn_eq_eval_add (h : BitHeap) (k : Nat) (v : Column) (env : BitEnv) :
+    (⟨h.width, h.columns.insert k v⟩ : BitHeap).eval env
+      = h.eval env + 2 ^ k * (v.eval env : Int) - 2 ^ k * ((h.get k).eval env : Int) := by
+  cases h
+  case mk width cols =>
+    simp [BitHeap.eval]
+    rw [Std.HashMap.fold_eq_foldl_toList]
+    rw [Std.HashMap.fold_eq_foldl_toList]
+    rw [foldl_sum]
+    rw [foldl_sum]
+    sorry
+
+@[grind => ]
+theorem eval_eraseColumn_eq_eval_sub (h : BitHeap) (k : Nat) (env : BitEnv) :
+    (⟨h.width, h.columns.erase k⟩ : BitHeap).eval env
+      = h.eval env - 2 ^ k * ((h.get k).eval env : Int) := by
+  simp [BitHeap.eval]
+  rw [Std.HashMap.fold_eq_foldl_toList]
+  rw [Std.HashMap.fold_eq_foldl_toList]
+
+  rw?
+  sorry
+
+
+theorem eval_insertColumn (h : BitHeap) (k : Nat) (v : Column) (env : BitEnv) :
+    (⟨h.width, h.columns.insert k v⟩ : BitHeap).eval env
+      = (⟨h.width, h.columns.erase k⟩ : BitHeap).eval env + 2 ^ k * (v.eval env : Int) := by
+  -- have := eval_insertColumn_eq_eval_add h k v env
+  -- have := eval_eraseColumn_eq_eval_sub h k env
+  -- grind only
+
+  simp [eval]
+  repeat rw [Std.HashMap.fold_eq_foldl_toList]
+  repeat rw [foldl_sum]
+  simp only [zero_add]
+
+  -- Both list are permutations of the same the same list
+  have hp : (h.columns.insert k v).toList.Perm ((k, v) :: (h.columns.erase k).toList) := by
+    sorry
+  -- After mapping, they are still permutations of each other
+  have hp_mapped : ((h.columns.insert k v).toList.map (fun p => 2 ^ p.fst * (p.snd.eval env : Int))).Perm
+                   (((k, v) :: (h.columns.erase k).toList).map (fun p => 2 ^ p.fst * (p.snd.eval env : Int))) :=
+    hp.map _
+  have hp_sum := hp_mapped.sum_eq -- Since they are permutations of each other, their sums are equal
+  rw [hp_sum]
+  grind
+
+
+theorem eval_eraseColumn (h : BitHeap) (k : Nat) (env : BitEnv) :
+    h.eval env
+      = (⟨h.width, h.columns.erase k⟩ : BitHeap).eval env + 2 ^ k * ((h.get k).eval env : Int) := by
+  sorry
 
 @[simp]
 theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap) (env : BitEnv) :
@@ -142,8 +219,13 @@ theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap) (env : Bi
   | case2 col h h1 =>
     simp only [evalMod, Int.emod_add_emod]
     have h3 : (⟨h.width, h.columns.insert col ((h.get col).insert c)⟩ : BitHeap).eval env = h.eval env + 2 ^ col * (c.eval env).toInt := by
-      simp [eval]
-      sorry
+
+      rw [eval_insertColumn, eval_eraseColumn h col env]
+
+      rw [Column.eval_insert]
+      · grind
+      · simp
+        grind
     rw [h3]
   | case3 _ _ _ h2 h1 ih =>
     simp only [ih, removeBit_width]
@@ -154,20 +236,19 @@ theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap) (env : Bi
       simp [mem_iff_contains]
       grind
 
-theorem th (m : Std.DHashMap Nat (fun _ => Column)) (k : Nat) (f : Column → Column) :
-    Std.DHashMap.Const.get? (Std.DHashMap.Const.modify m k f) k
-      = (Std.DHashMap.Const.get? m k).map f := by
-  exact Std.DHashMap.Const.get?_modify_self
-
 @[simp]
 theorem get_removeBit_of_ne (column : Nat) (h : BitHeap) (i j : Circuit)
   (h1 : i ∈ h.get column) (hne : i ≠ j) :
   i ∈ (removeBit column j h).get column := by
-  simp only [removeBit, mem_iff_contains]
-  unfold Std.HashMap.modify
-  simp [get]
-
-  sorry
+  rw [get_eq_getD] at h1
+  rw [get_eq_getD]
+  simp only [removeBit]
+  rcases hcol : h.columns[column]?
+  · simp_all only
+    grind
+  · simp_all only [Option.getD_some, mem_iff_contains, ne_eq, Std.HashMap.getElem?_modify_self,
+    Option.map_some, Column.erase, Column.contains, Std.HashSet.contains_erase]
+    grind
 
 theorem removeBit_decreases_size (col : Nat) (c : Circuit) (h : BitHeap) (h1: c ∈ h.get col) :
     ((removeBit col c h).get col).height < (h.get col).height := by
@@ -211,7 +292,8 @@ theorem halfAdder_correct_mod (column : Nat) (i j : Circuit) (h : BitHeap)
   simp [evalMod]
   generalize hvi : i.eval env = vi
   generalize hvj : j.eval env = vj
-  rcases vi <;> rcases vj <;> simp_all <;> grind
+  rcases vi <;> rcases vj <;> simp_all
+  grind
 
 @[simp]
 theorem fullAdder_preserves_width (column : Nat) (i j k : Circuit) (h : BitHeap) :
