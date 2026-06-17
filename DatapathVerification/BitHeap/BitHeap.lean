@@ -2,6 +2,7 @@ import Std.Data.HashMap
 import Std.Data.HashSet
 import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.Column
+import Std.Tactic.BVDecide
 
 structure BitHeap where
   width : Nat
@@ -66,6 +67,25 @@ partial def addBit (column : Nat) (c : Circuit) (h : BitHeap) : BitHeap :=
     addBit (column + 1) c h
   else
     ⟨h.width, h.columns.insert column (col.insert c)⟩
+
+-- TODO: make this variable size add
+def addBitHeap (h1 h2 : BitHeap) : BitHeap :=
+  let h : BitHeap := ⟨h1.width, Std.HashMap.emptyWithCapacity 0⟩
+  let h := h1.columns.fold (fun acc col column =>
+             column.elems.toList.foldl (fun acc' c => acc'.addBit col c) acc) h
+  let h := h2.columns.fold (fun acc col column =>
+             column.elems.toList.foldl (fun acc' c => acc'.addBit col c) acc) h
+  h
+
+def mulBitHeap (h1 h2 : BitHeap) : BitHeap :=
+  let newWidth := max h1.width h2.width
+  let h : BitHeap := ⟨newWidth, Std.HashMap.emptyWithCapacity 0⟩
+  let h := h1.columns.fold (fun acc col1 column1 =>
+             h2.columns.fold (fun acc' col2 column2 =>
+               column1.elems.toList.foldl (fun acc'' c1 =>
+                 column2.elems.toList.foldl (fun acc''' c2 =>
+                   acc'''.addBit (col1 + col2) (Circuit.binop .and c1 c2)) acc'') acc') acc) h
+  h
 
 def halfAdder (column : Nat) (i j : Circuit) (h : BitHeap) : AdderResult :=
   let h := h.removeBit column i

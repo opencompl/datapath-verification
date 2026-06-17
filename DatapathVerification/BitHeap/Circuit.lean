@@ -76,4 +76,16 @@ theorem eval_atLeastTwo (a b c : Circuit) (env : BitEnv) :
 
 end Circuit
 
+
+/-- A vector of circuits, used to represent symbolic BitVectors. -/
+def CircuitVector := Array Circuit
+
+namespace CircuitVector
+
+def eval (vec : CircuitVector) (env : Circuit.BitEnv) : Int :=
+  (vec.mapIdx (fun i c => 2^i * (if c.eval env then 1 else 0))).sum
+
+end CircuitVector
+
+
 end BitHeap
