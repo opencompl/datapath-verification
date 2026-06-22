@@ -10,7 +10,7 @@ namespace PartialProductGenerator
 
 /-- Build a bit heap of partial products for the given bit-width. -/
 def bitHeapOfPartialProducts (width : Nat) : BitHeap := Id.run do
-  let mut h := BitHeap.empty
+  let mut h := ⟨(width*2), Std.HashMap.emptyWithCapacity 0⟩
   for i in [0:width] do
     for j in [i:width+i] do
       h := h.addBit j (Circuit.bit (i * (width - 1) + j))
