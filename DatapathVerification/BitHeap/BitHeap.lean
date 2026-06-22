@@ -37,10 +37,12 @@ def evalMod (h : BitHeap w) (env : BitEnv) : Int :=
 def get (h : BitHeap w) (column : Nat) : Column :=
   h.columns.getD column (Column.empty)
 
-theorem get_eq_getD (h : BitHeap w) (column : Nat) :
-    h.get column = (h.columns[column]?).getD Column.empty := by
-  simp [get]
-  sorry
+-- if index is in bounds, getD returns the value
+theorem getD_in_bounds (h : BitHeap w) (column : Nat) (h1 : column < w) :
+    h.get column = h.columns[column] := by
+  simp [get, Vector.getD]
+  rw [Vector.getElem_eq_getElem?_get, Vector.getD_getElem?]
+  simp [h1]
 
 instance : Membership Circuit (BitHeap w) where
   mem h c :=
@@ -71,7 +73,7 @@ def addBit (column : Nat) (c : Circuit) (h : BitHeap w) : BitHeap w :=
   let col := h.get column
     if !col.contains c then
       ⟨h.columns.set column (col.insert c) h1⟩
-      else  addBit (column + 1) c (h.removeBit column c)
+      else addBit (column + 1) c (h.removeBit column c)
 
 structure AdderResult (w : Nat) where
   heap : BitHeap w
@@ -123,6 +125,11 @@ theorem foldl_sum (l : List (Nat × Column)) (env : BitEnv) (a : Int) :
   | cons p ps ih =>
     grind
 
+theorem eval_insertColumn (h : BitHeap w) (k : Nat) (col : Column) (env : BitEnv) (h1 : column < w) :
+    ({ columns := h.columns.set column col h1 } : BitHeap w).eval env
+      = ({ columns := h.columns.set column (Column.empty) h1} : BitHeap w).eval env + 2 ^ column * (col.eval env : Int) := by
+  sorry
+
 @[simp]
 theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : BitEnv) :
     (h.addBit column c).evalMod env = (h.evalMod env +  2^column  * (c.eval env).toInt) % 2^(w) := by
@@ -138,23 +145,41 @@ theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : 
         apply Int.emod_eq_zero_of_dvd
         exact_mod_cast by_pow2_of_zero_eval h h1
     simp [Int.add_emod, h3]
-  | case2 col h h1 =>
+  | case2 column h h4 h3 col h1 =>
     simp only [evalMod, Int.emod_add_emod]
-    sorry
-  | case3 _ _ _ h2 h1 ih =>
-    sorry
+    have : ({ columns := h.columns.set column (col.insert c) h3 } : BitHeap w).eval env = (h.eval env + 2 ^ column * (c.eval env).toInt) := by
+      simp_all
+      rw [eval_insertColumn]
+
+      sorry
+    rw [this]
+  | case3 col h h4 h3 h2 h1 ih =>
+    rw [ih]
+    rw [evalMod_heap_removeBit]
+    have : (- 2 ^ col * (c.eval env).toInt + 2 ^ (col + 1) * (c.eval env).toInt) = 2 ^ col * (c.eval env).toInt := by grind
+    rw [← this]
+    simp_all -- this looks very ugly
+    grind
+    simp_all
+    grind
+
+theorem get_removeBit_self (column : Nat) (c : Circuit) (h : BitHeap w) (hb : column < w) :
+    (removeBit column c h).get column = (h.get column).erase c := by
+  simp only [removeBit]
+  rw [getD_in_bounds] <;> grind
 
 @[simp]
 theorem get_removeBit_of_ne (column : Nat) (h : BitHeap w) (i j : Circuit)
-  (h1 : i ∈ h.get column) (hne : i ≠ j) :
-  i ∈ (removeBit column j h).get column := by
-  rw [get_eq_getD] at h1
-  rw [get_eq_getD]
-  simp only [removeBit]
-  rcases hcol : h.columns[column]?
-  · simp_all only
-    grind
-  · sorry
+  (h1 : i ∈ h.get column) (hne : i ≠ j) : i ∈ (removeBit column j h).get column := by
+  by_cases hb : column < w
+  · rw [get_removeBit_self _ _ _ hb]
+    exact (erase_eq_erase (h.get column) h1 (id (Ne.symm hne))).mpr h1
+  · have hr : removeBit column j h = h := by
+      simp only [removeBit]
+      rw [Vector.setIfInBounds_eq_of_size_le]
+      grind
+    rw [hr]
+    exact h1
 
 theorem removeBit_decreases_size (col : Nat) (c : Circuit) (h : BitHeap w) (h1: c ∈ h.get col) :
     ((removeBit col c h).get col).height < (h.get col).height := by

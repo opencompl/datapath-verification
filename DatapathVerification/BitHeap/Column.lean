@@ -49,6 +49,9 @@ theorem height_eq_size (col : Column) : col.height = col.elems.size := rfl
 def toList (col : Column) : List Circuit :=
   col.elems.toList
 
+theorem erase_eq_erase (col : Column) (he : d ∈ col) (hne : c ≠ d) : d ∈ col.erase c ↔ d ∈ col := by
+  simp_all [erase, contains]
+
 @[simp]
 theorem eval_erase (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :
     (col.erase c).eval env = col.eval env - (c.eval env).toInt := by
