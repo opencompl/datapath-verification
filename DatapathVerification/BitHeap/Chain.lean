@@ -52,18 +52,6 @@ def ChainPreconditions (steps : List Adder) (h : BitHeap w) : Prop :=
              ∧ i ≠ j ∧ i ≠ k ∧ j ≠ k)
       ∧ ChainPreconditions rest (applyAdder s h)
 
-@[simp]
-theorem applyChain_preserves_width (steps : List Adder) (h : BitHeap w) : (applyChain steps h).width = h.width := by
-  induction steps generalizing h with
-  | nil => rfl
-  | cons s rest ih =>
-    simp [applyChain]
-    cases s with
-    | halfAdder =>
-      simp [applyAdder, ih]
-    | fullAdder =>
-      simp [applyAdder, ih]
-
 theorem applyChain_correct_mod (steps : List Adder) (h : BitHeap w)
   (hwf : ChainPreconditions steps h) :
   ∀ (env : BitEnv), (applyChain steps h).evalMod env = h.evalMod env := by
@@ -101,30 +89,7 @@ def applyChainSafe (steps : List Adder) (h : BitHeap w) : Option (BitHeap w) :=
     else
       none
 
-@[simp]
-theorem applyChainSafe_preserves_width (steps : List Adder) (h h' : BitHeap w)
-    (heq : applyChainSafe steps h = some h') :
-    h'.width = h.width := by
-  induction steps generalizing h with
-  | nil =>
-    simp [applyChainSafe] at heq
-    rw [heq]
-  | cons s rest ih =>
-    simp [applyChainSafe] at heq
-    obtain ⟨hleft, hright⟩ := heq
-    have ih_applied := ih (applyAdder s h) hright
-    rw [ih_applied]
-    simp_all [applyAdder, isApplicable]
-    cases s with
-      simp at hleft
-    | halfAdder =>
-      obtain ⟨⟨i_in_col, j_in_col⟩, not_eq⟩ := hleft
-      rw [halfAdder_preserves_width _ _ _]
-    | fullAdder =>
-      obtain ⟨⟨⟨⟨⟨hi, hj⟩, hk⟩, hij⟩, hik⟩, hjk⟩ := hleft
-      rw [fullAdder_preserves_width _ _ _]
-
-theorem applyChainSafe_correct_mod (steps : List Adder) (h h' : BitHeap w) (env : BitEnv)
+theorem applyChainSafe_correct_mod (steps : List Adder) (h h' : BitHeap w)
     (heq : applyChainSafe steps h = some h') :
    ∀ (env : BitEnv), h'.evalMod env = h.evalMod env := by
   intros env
@@ -146,7 +111,6 @@ theorem applyChainSafe_correct_mod (steps : List Adder) (h h' : BitHeap w) (env 
     | fullAdder =>
       obtain ⟨⟨⟨⟨⟨hi, hj⟩, hk⟩, hij⟩, hik⟩, hjk⟩ := hleft
       rw [fullAdder_correct_mod _ _ _ _ _ hi hj hk hij hik hjk env]
-
 
 end Chain
 
