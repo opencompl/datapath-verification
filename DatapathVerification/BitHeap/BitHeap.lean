@@ -175,25 +175,7 @@ theorem eval_eraseColumn_eq_eval_sub (h : BitHeap) (k : Nat) (env : BitEnv) :
 theorem eval_insertColumn (h : BitHeap) (k : Nat) (v : Column) (env : BitEnv) :
     (⟨h.width, h.columns.insert k v⟩ : BitHeap).eval env
       = (⟨h.width, h.columns.erase k⟩ : BitHeap).eval env + 2 ^ k * (v.eval env : Int) := by
-  -- have := eval_insertColumn_eq_eval_add h k v env
-  -- have := eval_eraseColumn_eq_eval_sub h k env
-  -- grind only
-
-  simp [eval]
-  repeat rw [Std.HashMap.fold_eq_foldl_toList]
-  repeat rw [foldl_sum]
-  simp only [zero_add]
-
-  -- Both list are permutations of the same the same list
-  have hp : (h.columns.insert k v).toList.Perm ((k, v) :: (h.columns.erase k).toList) := by
-    sorry
-  -- After mapping, they are still permutations of each other
-  have hp_mapped : ((h.columns.insert k v).toList.map (fun p => 2 ^ p.fst * (p.snd.eval env : Int))).Perm
-                   (((k, v) :: (h.columns.erase k).toList).map (fun p => 2 ^ p.fst * (p.snd.eval env : Int))) :=
-    hp.map _
-  have hp_sum := hp_mapped.sum_eq -- Since they are permutations of each other, their sums are equal
-  rw [hp_sum]
-  grind
+  sorry
 
 
 theorem eval_eraseColumn (h : BitHeap) (k : Nat) (env : BitEnv) :
