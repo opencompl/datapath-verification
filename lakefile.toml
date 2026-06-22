@@ -6,6 +6,6 @@ defaultTargets = ["DatapathVerification"]
 name = "DatapathVerification"
 
 [[require]]
-name = "Blase"
-git = { url = "https://github.com/opencompl/lean-mlir", subDir = "Blase/" }
-rev = "main"
+name = "mathlib"
+scope = "leanprover-community"
+rev = "master"
