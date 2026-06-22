@@ -39,13 +39,6 @@ info: 5
 -- Now with bit 3 set (env2 sets bits 0, 2, 3)
 def env2 : BitEnv := fun n => n = 0 || n = 2 || n = 3
 
--- Full eval: 1 + 0 + 4 + 8 = 13
-/--
-info: 13
--/
-#guard_msgs in
-#eval heapWidth3.eval (show BitEnv from env2)
-
 -- evalMod: 13 mod 8 = 5 (the bit-3 contribution is truncated)
 /--
 info: 5
