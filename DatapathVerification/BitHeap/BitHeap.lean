@@ -114,17 +114,6 @@ theorem by_pow2_of_zero_eval (h : BitHeap w) (h1 : col ≥ w) :
   sorry
   -- exact Nat.pow_dvd_pow_iff_le_right'.mpr h1 -> this works for Nat.
 
-/--
-Relate BitHeap.env to sum of a list. (Nat x Column) comes from Std.HashMap.toList, since it returns (Key x Value) pairs.
--/
-theorem foldl_sum (l : List (Nat × Column)) (env : BitEnv) (a : Int) :
-  l.foldl (fun acc (p : Nat × Column) => acc + 2 ^ p.1 * (p.2.eval env : Int)) a =
-    a + (l.map (fun p => 2 ^ p.1 * (p.2.eval env : Int))).sum := by
-  induction l generalizing a with
-  | nil => simp
-  | cons p ps ih =>
-    grind
-
 theorem eval_insertColumn (h : BitHeap w) (k : Nat) (col : Column) (env : BitEnv) (h1 : column < w) :
     ({ columns := h.columns.set column col h1 } : BitHeap w).eval env
       = ({ columns := h.columns.set column (Column.empty) h1} : BitHeap w).eval env + 2 ^ column * (col.eval env : Int) := by
@@ -150,8 +139,14 @@ theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : 
     have : ({ columns := h.columns.set column (col.insert c) h3 } : BitHeap w).eval env = (h.eval env + 2 ^ column * (c.eval env).toInt) := by
       simp_all
       rw [eval_insertColumn]
-
-      sorry
+      · rw [Column.eval_insert]
+        · simp
+          rw [Int.mul_add]
+          simp [eval]
+          sorry
+        · simp
+          exact h1
+      · exact h.maxHeight
     rw [this]
   | case3 col h h4 h3 h2 h1 ih =>
     rw [ih]
