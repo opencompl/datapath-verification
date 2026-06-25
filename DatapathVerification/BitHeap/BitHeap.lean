@@ -218,39 +218,30 @@ theorem get_removeBit_of_ne (column : Nat) (h : BitHeap w) (i j : Circuit)
     rw [hr]
     exact h1
 
-@[grind => ]
 theorem removeBit_decreases_size (col : Nat) (c : Circuit) (h : BitHeap w) (h1: c ∈ h.get col) :
-    ((removeBit col c h).get col).height ≤ (h.get col).height := by
+    ((removeBit col c h).get col).height < (h.get col).height := by
   simp only [removeBit, height_eq_size]
   simp [erase]
-  by_cases h2 : col < w
-  · rw [getD_in_bounds _ _ h2]
-    rw [Vector.getElem_setIfInBounds]
-    grind
-  · rw [Vector.setIfInBounds_eq_of_size_le]
-    · simp
-    · grind
+  sorry
 
-@[grind => ]
 theorem double_removeBit_decreases (col : Nat) (c₁ c₂ : Circuit) (h : BitHeap w)
     (h1 : c₁ ∈ h.get col) (h2 : c₂ ∈ h.get col) (hne : c₁ ≠ c₂) :
-  ((removeBit col c₁ (removeBit col c₂ h)).get col).height ≤ (h.get col).height := by
+  ((removeBit col c₁ (removeBit col c₂ h)).get col).height < (h.get col).height := by
     have h1' : c₁ ∈ (removeBit col c₂ h).get col :=
       get_removeBit_of_ne col h c₁ c₂ h1 hne
-    exact Nat.le_trans
+    exact Nat.lt_trans
       (removeBit_decreases_size col c₁ (removeBit col c₂ h) h1')
       (removeBit_decreases_size col c₂ h h2)
 
-@[grind => ]
 theorem triple_removeBit_decreases (col : Nat) (c₁ c₂ c₃ : Circuit) (h : BitHeap w)
     (h1 : c₁ ∈ h.get col) (h2 : c₂ ∈ h.get col) (h3 : c₃ ∈ h.get col)
     (hne12 : c₁ ≠ c₂) (hne13 : c₁ ≠ c₃) (hne23 : c₂ ≠ c₃) :
-  ((removeBit col c₁ (removeBit col c₂ (removeBit col c₃ h))).get col).height ≤ (h.get col).height := by
+  ((removeBit col c₁ (removeBit col c₂ (removeBit col c₃ h))).get col).height < (h.get col).height := by
     have h1' : c₁ ∈ (removeBit col c₃ h).get col :=
       get_removeBit_of_ne col h c₁ c₃ h1 hne13
     have h2' : c₂ ∈ (removeBit col c₃ h).get col :=
       get_removeBit_of_ne col h c₂ c₃ h2 hne23
-    exact Nat.le_trans
+    exact Nat.lt_trans
       (double_removeBit_decreases col c₁ c₂ (removeBit col c₃ h) h1' h2' hne12)
       (removeBit_decreases_size col c₃ h h3)
 
