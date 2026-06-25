@@ -46,6 +46,12 @@ def height (col : Column) : Nat :=
 @[simp]
 theorem height_eq_size (col : Column) : col.height = col.elems.size := rfl
 
+@[simp]
+theorem empty_eval_zero (col : Column) (env : BitEnv) (h : col = Column.empty) : col.eval env = 0 := by
+  simp_all [eval, empty]
+  rw [Std.HashSet.fold_eq_foldl_toList]
+  simp
+
 def toList (col : Column) : List Circuit :=
   col.elems.toList
 
@@ -60,17 +66,21 @@ theorem foldl_sum (l : List Circuit) (env : BitEnv) (a : Nat) :
   | cons p ps ih =>
     grind
 
+@[grind =>]
+theorem Std.HashSet.erase_toList_perm_filter_toList [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
+  (m : Std.HashSet α) :
+    (m.erase d).toList.Perm (m.toList.filter (fun x => (x == d) = false)) := by
+  sorry
+
 @[simp]
 theorem eval_erase (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :
-    (col.erase c).eval env = col.eval env - (c.eval env).toInt := by
+    (col.erase c).eval env = col.eval env - (c.eval env).toNat := by
   simp [eval, erase]
-  repeat rw [Std.HashSet.fold_eq_foldl_toList]
-  rw [eq_comm, Int.sub_eq_iff_eq_add']
-  repeat rw [foldl_sum]
+  repeat rw [Std.HashSet.fold_eq_foldl_toList, foldl_sum]
   simp only [Nat.zero_add]
   have : col.elems.toList.Perm (c :: (col.elems.erase c).toList) := by
     sorry
-  sorry
+  grind
 
 @[simp]
 theorem eval_insert (col : Column) (c : Circuit) (env : BitEnv) (h : c ∉ col) :
@@ -84,6 +94,7 @@ theorem eval_insert (col : Column) (c : Circuit) (env : BitEnv) (h : c ∉ col) 
     rw [if_neg h'] at key
     exact key
   grind
+
 
 end Column
 

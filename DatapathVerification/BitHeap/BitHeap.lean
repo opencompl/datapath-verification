@@ -1,10 +1,8 @@
-import Std.Data.HashMap
 import Std.Data.HashSet
 import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.Column
 import Mathlib.Tactic.SplitIfs
-import Std.Data.HashMap.Lemmas
-import Std.Tactic.Do
+import Mathlib.Algebra.Divisibility.Basic
 
 structure BitHeap (width : Nat) where
   columns : Vector BitHeap.Column width
@@ -23,10 +21,18 @@ instance : ToString (BitHeap w) where
 def empty (w : Nat) : BitHeap w := ⟨Vector.replicate w Column.empty⟩
 
 /--
+Horner's method to compute the weighted sum
+-/
+def HornersMethod (env : BitEnv) : List Column → Nat
+  | [] => 0
+  | c :: rest => (c.eval env) + 2 * HornersMethod env rest
+
+/--
 Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
-def eval (h : BitHeap w) (env : BitEnv) : Int :=
-  h.columns.toList.zipIdx.foldl (fun acc (col, idx) => acc + 2^idx * col.eval env) 0
+def eval (h : BitHeap w) (env : BitEnv) : Nat :=
+  HornersMethod env h.columns.toList
+  -- h.columns.toList.zipIdx.foldl (fun acc (col, idx) => acc + 2^idx * col.eval env) 0
 
 /--
 Evaluate a bit-heap modulo 2^width, to compute the final sum of all the bits in the heap.
@@ -109,15 +115,54 @@ theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap w) (env
   -- have : (h.columns.modify column fun col => col.erase c)  = h.columns - 2 ^ column * (c.eval env).toInt := by sorry
   sorry
 
-theorem by_pow2_of_zero_eval (h : BitHeap w) (h1 : col ≥ w) :
-  (2 : Int) ^ w ∣ (2 : Int) ^ col := by
-  sorry
-  -- exact Nat.pow_dvd_pow_iff_le_right'.mpr h1 -> this works for Nat.
+-- Basically eval_insertColumn_eq_eval_add, but for HornersMethod. Adding a new column to a list is equivalent
+-- to adding the new column's evaluation to the old evaluation, and subtracting the old column's evaluation.
+theorem hornersMethod_set (env : BitEnv) (l : List Column) (k : Nat) (v : Column) (hk : k < l.length) :
+    (HornersMethod env (l.set k v) : Int)
+      = HornersMethod env l + 2^k * (v.eval env : Int) - 2^k * ((l[k]'hk).eval env : Int) := by
+  induction l generalizing k with
+  | nil =>
+    simp at hk
+  | cons c cs ih =>
+    cases k with
+    | zero =>
+      simp [HornersMethod, List.set]
+      grind
+    | succ j =>
+      simp [HornersMethod]
+      grind
 
-theorem eval_insertColumn (h : BitHeap w) (k : Nat) (col : Column) (env : BitEnv) (h1 : column < w) :
-    ({ columns := h.columns.set column col h1 } : BitHeap w).eval env
-      = ({ columns := h.columns.set column (Column.empty) h1} : BitHeap w).eval env + 2 ^ column * (col.eval env : Int) := by
-  sorry
+@[grind => ]
+theorem eval_insertColumn_eq_eval_add (h : BitHeap w) (k : Nat) (v : Column) (env : BitEnv) (h1 : k < w) :
+    ({ columns := h.columns.set k v h1 } : BitHeap w).eval env
+      = h.eval env + 2 ^ k * (v.eval env : Int) - 2 ^ k * ((h.get k).eval env : Int) := by
+  simp only [BitHeap.eval, Vector.toList_set]
+  rw [hornersMethod_set env h.columns.toList k v (by simpa using h1)]
+  simp only [Vector.getElem_toList, Int.sub_right_inj]
+  rw [getD_in_bounds h k h1]
+
+@[grind => ]
+theorem eval_eraseColumn_eq_eval_sub (h : BitHeap w) (k : Nat) (env : BitEnv) (h1 : k < w) :
+    ({ columns := h.columns.set k (Column.empty) h1} : BitHeap w).eval env
+      = h.eval env - 2 ^ k * ((h.get k).eval env : Int) := by
+  simp only [BitHeap.eval, Vector.toList_set]
+  rw [hornersMethod_set env h.columns.toList k (Column.empty) (by simpa using h1)]
+  simp only [empty_eval_zero, Int.cast_ofNat_Int, Int.mul_zero, Int.add_zero, Vector.getElem_toList,
+    Int.sub_right_inj]
+  rw [getD_in_bounds h k h1]
+
+theorem eval_insertColumn (h : BitHeap w) (k : Nat) (col : Column) (env : BitEnv) (h1 : k < w) :
+    ({ columns := h.columns.set k col h1 } : BitHeap w).eval env
+      = ({ columns := h.columns.set k (Column.empty) h1} : BitHeap w).eval env + 2 ^ k * (col.eval env : Nat) := by
+  have := eval_insertColumn_eq_eval_add h k col env h1
+  have := eval_eraseColumn_eq_eval_sub h k env h1
+  grind only
+
+theorem eval_eraseColumn (h : BitHeap w) (k : Nat) (env : BitEnv) (h1 : k < w) :
+    h.eval env
+      = ({ columns := h.columns.set k (Column.empty) h1} : BitHeap w).eval env + 2 ^ k * ((h.get k).eval env : Nat) := by
+  have := eval_eraseColumn_eq_eval_sub h k env h1
+  grind
 
 @[simp]
 theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : BitEnv) :
@@ -132,21 +177,18 @@ theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : 
       · simp only [Bool.toInt_true]
         rw [Int.mul_one]
         apply Int.emod_eq_zero_of_dvd
-        exact_mod_cast by_pow2_of_zero_eval h h1
+        have : (2:Nat)^w ∣ (2:Nat)^col := Nat.pow_dvd_pow 2 h1
+        exact Int.natAbs_dvd_natAbs.mp this
     simp [Int.add_emod, h3]
   | case2 column h h4 h3 col h1 =>
     simp only [evalMod, Int.emod_add_emod]
     have : ({ columns := h.columns.set column (col.insert c) h3 } : BitHeap w).eval env = (h.eval env + 2 ^ column * (c.eval env).toInt) := by
-      simp_all
       rw [eval_insertColumn]
-      · rw [Column.eval_insert]
-        · simp
-          rw [Int.mul_add]
-          simp [eval]
-          sorry
-        · simp
-          exact h1
-      · exact h.maxHeight
+      rw [eval_eraseColumn h column env h3]
+      rw [Column.eval_insert]
+      · push_cast
+        cases c.eval env <;> simp <;> grind
+      · simp_all
     rw [this]
   | case3 col h h4 h3 h2 h1 ih =>
     rw [ih]
@@ -176,30 +218,39 @@ theorem get_removeBit_of_ne (column : Nat) (h : BitHeap w) (i j : Circuit)
     rw [hr]
     exact h1
 
+@[grind => ]
 theorem removeBit_decreases_size (col : Nat) (c : Circuit) (h : BitHeap w) (h1: c ∈ h.get col) :
-    ((removeBit col c h).get col).height < (h.get col).height := by
+    ((removeBit col c h).get col).height ≤ (h.get col).height := by
   simp only [removeBit, height_eq_size]
   simp [erase]
-  sorry
+  by_cases h2 : col < w
+  · rw [getD_in_bounds _ _ h2]
+    rw [Vector.getElem_setIfInBounds]
+    grind
+  · rw [Vector.setIfInBounds_eq_of_size_le]
+    · simp
+    · grind
 
+@[grind => ]
 theorem double_removeBit_decreases (col : Nat) (c₁ c₂ : Circuit) (h : BitHeap w)
     (h1 : c₁ ∈ h.get col) (h2 : c₂ ∈ h.get col) (hne : c₁ ≠ c₂) :
-  ((removeBit col c₁ (removeBit col c₂ h)).get col).height < (h.get col).height := by
+  ((removeBit col c₁ (removeBit col c₂ h)).get col).height ≤ (h.get col).height := by
     have h1' : c₁ ∈ (removeBit col c₂ h).get col :=
       get_removeBit_of_ne col h c₁ c₂ h1 hne
-    exact Nat.lt_trans
+    exact Nat.le_trans
       (removeBit_decreases_size col c₁ (removeBit col c₂ h) h1')
       (removeBit_decreases_size col c₂ h h2)
 
+@[grind => ]
 theorem triple_removeBit_decreases (col : Nat) (c₁ c₂ c₃ : Circuit) (h : BitHeap w)
     (h1 : c₁ ∈ h.get col) (h2 : c₂ ∈ h.get col) (h3 : c₃ ∈ h.get col)
     (hne12 : c₁ ≠ c₂) (hne13 : c₁ ≠ c₃) (hne23 : c₂ ≠ c₃) :
-  ((removeBit col c₁ (removeBit col c₂ (removeBit col c₃ h))).get col).height < (h.get col).height := by
+  ((removeBit col c₁ (removeBit col c₂ (removeBit col c₃ h))).get col).height ≤ (h.get col).height := by
     have h1' : c₁ ∈ (removeBit col c₃ h).get col :=
       get_removeBit_of_ne col h c₁ c₃ h1 hne13
     have h2' : c₂ ∈ (removeBit col c₃ h).get col :=
       get_removeBit_of_ne col h c₂ c₃ h2 hne23
-    exact Nat.lt_trans
+    exact Nat.le_trans
       (double_removeBit_decreases col c₁ c₂ (removeBit col c₃ h) h1' h2' hne12)
       (removeBit_decreases_size col c₃ h h3)
 
