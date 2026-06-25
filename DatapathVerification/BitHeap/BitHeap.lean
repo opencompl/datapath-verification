@@ -105,16 +105,6 @@ def fullAdder (column : Nat) (i j k : Circuit) (h : BitHeap w) : AdderResult w :
   let h := h.addBit (column + 1) carry
   ⟨h, sum, carry⟩
 
-@[simp]
-theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : BitEnv) (h1 : c ∈ h.get column) :
-  (h.removeBit column c).evalMod env = (h.evalMod env - 2^(column) * (c.eval env).toInt) % 2^(w) := by
-  unfold evalMod
-  simp [eval, removeBit]
-  have : (h.get column |>.erase c).eval env = (h.get column).eval env - 2 ^ column * (c.eval env).toInt := by
-    sorry
-  -- have : (h.columns.modify column fun col => col.erase c)  = h.columns - 2 ^ column * (c.eval env).toInt := by sorry
-  sorry
-
 -- Basically eval_insertColumn_eq_eval_add, but for HornersMethod. Adding a new column to a list is equivalent
 -- to adding the new column's evaluation to the old evaluation, and subtracting the old column's evaluation.
 theorem hornersMethod_set (env : BitEnv) (l : List Column) (k : Nat) (v : Column) (hk : k < l.length) :
@@ -163,6 +153,37 @@ theorem eval_eraseColumn (h : BitHeap w) (k : Nat) (env : BitEnv) (h1 : k < w) :
       = ({ columns := h.columns.set k (Column.empty) h1} : BitHeap w).eval env + 2 ^ k * ((h.get k).eval env : Nat) := by
   have := eval_eraseColumn_eq_eval_sub h k env h1
   grind
+
+
+theorem if_elem_not_empty (col : Nat) (c : Circuit) (h : BitHeap w) :
+   (c ∈ h.get col) → (col < w) := by
+  intro h1
+  by_contra hge
+  simp at hge
+  have hempty : h.get col = Column.empty := by
+    simp [get, Vector.getD, hge]
+  rw [hempty, mem_iff_contains, Column.empty, Column.contains] at h1
+  grind
+
+@[simp]
+theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : BitEnv) (h1 : c ∈ h.get column) :
+  (h.removeBit column c).evalMod env = (h.evalMod env - 2^(column) * (c.eval env).toInt) % 2^(w) := by
+  simp [evalMod, removeBit]
+  have : ({ columns := h.columns.setIfInBounds column ((h.get column).erase c) : BitHeap w}.eval env) = (↑(h.eval env) - 2 ^ column * (c.eval env).toInt) := by
+    simp only [eval, Vector.toList_setIfInBounds]
+    rw [hornersMethod_set]
+    · rw [eval_erase]
+      ·
+        rw [getD_in_bounds h column]
+        ·
+          push_cast
+          sorry
+        · exact if_elem_not_empty column c h h1
+      · exact h1
+    · simp
+      exact if_elem_not_empty column c h h1
+
+  rw [this]
 
 @[simp]
 theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : BitEnv) :

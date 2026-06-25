@@ -66,7 +66,11 @@ theorem foldl_sum (l : List Circuit) (env : BitEnv) (a : Nat) :
   | cons p ps ih =>
     grind
 
-@[simp]
+theorem Std.HashSet.erase_toList_perm_filter_toList [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
+  (m : Std.HashSet α) :
+    (m.erase d).toList.Perm (m.toList.filter (fun x => (x == d) = false)) := by
+  sorry
+
 theorem eval_erase (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :
     (col.erase c).eval env = col.eval env - (c.eval env).toNat := by
   simp [eval, erase]
