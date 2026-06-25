@@ -12,8 +12,8 @@ namespace WallaceTreeExamples
 
 abbrev BitEnv := Nat → Bool
 
-def pp4 : BitHeap := bitHeapOfPartialProducts 4
-def pp8 : BitHeap := bitHeapOfPartialProducts 8
+def pp4 : BitHeap 8 := bitHeapOfPartialProducts 4
+def pp8 : BitHeap 16 := bitHeapOfPartialProducts 8
 /--
 info: [1, 2, 3, 4, 3, 2, 1]
 -/

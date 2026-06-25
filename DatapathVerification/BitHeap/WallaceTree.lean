@@ -26,8 +26,8 @@ If acc.get col has ≥ 4 bits but the original column has only 2 bits left,
   a half adder is used instead. This is because we cannot consume newly added bits, so we only consume the original bits in the column.
 If acc.get col has exactly 3 bits, a single half adder is applied and we stop.
 -/
-partial def WallaceStageColumn (col : Nat) (h : BitHeap) (acc : BitHeap)
-    : BitHeap × BitHeap × List Adder :=
+partial def WallaceStageColumn (col : Nat) (h : BitHeap w) (acc : BitHeap w)
+    : BitHeap w × BitHeap w × List Adder :=
   match (h.get col).toList with
     | x :: y :: z :: _ =>
         let ⟨newOriginal, newAcc, FA⟩ := Compression.applyFullAdder col x y z h acc
@@ -40,8 +40,8 @@ partial def WallaceStageColumn (col : Nat) (h : BitHeap) (acc : BitHeap)
     | _ => (h, acc, [])
 
 -- TODO: This is the same function as WallaceStageColumn, with incomplete termination proof.
-def WallaceStageColumnNotPartial (col : Nat) (h : BitHeap) (acc : BitHeap)
-    : BitHeap × BitHeap × List Adder :=
+def WallaceStageColumnNotPartial (col : Nat) (h : BitHeap w) (acc : BitHeap w)
+    : BitHeap w × BitHeap w × List Adder :=
   match (h.get col).toList with
     | x :: y :: z :: _ =>
         let ⟨newOriginal, newAcc, FA⟩ := Compression.applyFullAdder col x y z h acc
@@ -84,7 +84,7 @@ compressed bits are removed from both acc and h (original heap).
 This separation lets us track which bits are carries, since
 generated carry bits contribute to the height calculation but are not themselves compressed in the same stage.
 -/
-def WallaceStage (h : BitHeap) : BitHeap × List Adder :=
+def WallaceStage (h : BitHeap w) : BitHeap w × List Adder :=
   let (_, acc, adders) :=
   (List.range h.columns.size).foldl
     (fun (original, acc, adders) col =>
@@ -100,7 +100,7 @@ Top-level Wallace Tree function.
 
 Repeatedly applies WallaceStage until every column has at most 2 bits.
 -/
-partial def WallaceTree (h : BitHeap) : BitHeap × List Adder :=
+partial def WallaceTree (h : BitHeap w) : BitHeap w × List Adder :=
     if h.maxHeight ≤ 2 then
     (h, [])
   else

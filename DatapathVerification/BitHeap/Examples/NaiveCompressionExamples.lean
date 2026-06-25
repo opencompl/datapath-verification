@@ -8,15 +8,15 @@ open Chain
 
 namespace NaiveCompressionExamples
 
-def threeBitsInCol1 : BitHeap :=
-  let h : BitHeap := ⟨32, Std.HashMap.emptyWithCapacity 0⟩
+def threeBitsInCol1 : BitHeap 2 :=
+  let h := BitHeap.empty 2
   let h := h.addBit 1 (Circuit.bit 0)
   let h := h.addBit 1 (Circuit.bit 1)
   let h := h.addBit 1 (Circuit.bit 2)
   h
 
-def fiveBitsInCol1 : BitHeap :=
-  let h : BitHeap := ⟨32, Std.HashMap.emptyWithCapacity 0⟩
+def fiveBitsInCol1 : BitHeap 32 :=
+  let h := BitHeap.empty 32
   let h := h.addBit 1 (Circuit.bit 0)
   let h := h.addBit 1 (Circuit.bit 1)
   let h := h.addBit 1 (Circuit.bit 2)
@@ -24,8 +24,8 @@ def fiveBitsInCol1 : BitHeap :=
   let h := h.addBit 1 (Circuit.bit 4)
   h
 
-def multiColSmall : BitHeap :=
-  let h : BitHeap := ⟨3, Std.HashMap.emptyWithCapacity 0⟩
+def multiColSmall : BitHeap 3 :=
+  let h := BitHeap.empty 3
   let h := h.addBit 0 (Circuit.bit 0)
   let h := h.addBit 0 (Circuit.bit 1)
   let h := h.addBit 1 (Circuit.bit 2)
@@ -84,7 +84,6 @@ info: 6
 -/
 #guard_msgs in
 #eval (NaiveCompression.reduceColumn 1 fiveBitsInCol1).1.evalMod (show BitEnv from env1)
-
 
 -------------
 /--
