@@ -34,7 +34,6 @@ Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
 def eval (h : BitHeap w) (env : BitEnv) : Nat :=
   HornersMethod env h.columns.toList
-  -- h.columns.toList.zipIdx.foldl (fun acc (col, idx) => acc + 2^idx * col.eval env) 0
 
 /--
 Evaluate a bit-heap modulo 2^width, to compute the final sum of all the bits in the heap.

@@ -43,20 +43,6 @@ theorem Std.HashSet.nodup_toList [BEq α] [Hashable α] [EquivBEq α] [LawfulHas
   · grind
   · apply HashMap.nodup_toList
 
-theorem Std.HashMap.erase_toList_perm_filter_toList [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
-  (m : HashMap α β) :
-    (m.erase d).toList.Perm (m.toList.filter (fun x => (x.1 == d) = false)) := by
-  apply List.Perm.of_nodup_of_nodup_of_forall_mem_iff_mem
-  · apply HashMap.nodup_toList
-  · apply List.filter_nodup
-    apply HashMap.nodup_toList
-  · simp [HashMap.getKey?_erase, HashMap.getElem?_erase]
-    intro a b
-    by_cases h : d == a
-    · simp [h, BEq.symm h]
-    · simp at h
-      simp [h, BEq.symm_false h]
-
 theorem Std.HashSet.erase_toList_perm_filter_toList [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
   (m : Std.HashSet α) :
     (m.erase d).toList.Perm (m.toList.filter (fun x => (x == d) = false)) := by
