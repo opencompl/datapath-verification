@@ -1,5 +1,6 @@
 import Std.Data.HashSet
 import DatapathVerification.BitHeap.Circuit
+import DatapathVerification.BitHeap.HashSetLemmas
 
 namespace BitHeap
 
@@ -16,10 +17,6 @@ instance : ToString Column where
   toString col := toString col.elems.toList
 
 namespace Column
-
-#check @Std.HashSet.contains_emptyWithCapacity   -- (emptyWithCapacity n).contains a = false
-#check @Std.HashSet.not_mem_emptyWithCapacity    -- ¬ a ∈ emptyWithCapacity n
--- or possibly mem_emptyWithCapacity : a ∈ emptyWithCapacity n ↔ False
 
 def contains (col : Column) (c : Circuit) : Bool :=
   col.elems.contains c

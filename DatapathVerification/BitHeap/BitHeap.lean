@@ -181,6 +181,8 @@ theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap w) (env
           · cases c.eval env <;> simp_all <;> grind
           · simp [Column.eval]
             cases c.eval env <;> simp
+            rw [Std.HashSet.fold_eq_foldl_toList]
+            simp [Column.foldl_sum]
             sorry
         · exact if_elem_not_empty column c h h1
       · exact h1
