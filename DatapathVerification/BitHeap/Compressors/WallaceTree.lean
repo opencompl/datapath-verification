@@ -1,7 +1,7 @@
 import DatapathVerification.BitHeap.BitHeap
 import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
-import DatapathVerification.BitHeap.CompressionHelpers
+import DatapathVerification.BitHeap.Compressors.CompressionHelpers
 import Std.Data.HashSet
 
 open BitHeap
