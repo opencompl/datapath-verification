@@ -136,20 +136,18 @@ theorem hornersMethod_set (env : BitEnv) (l : List Column) (k : Nat) (v : Column
 theorem eval_insertColumn_eq_eval_add (h : BitHeap w) (k : Nat) (v : Column) (env : BitEnv) (h1 : k < w) :
     (h.setColumn k v h1).eval env
       = h.eval env + 2 ^ k * (v.eval env : Int) - 2 ^ k * ((h.get k).eval env : Int) := by
-  simp only [BitHeap.eval, Vector.toList_set, BitHeap.setColumn]
-  rw [hornersMethod_set env h.columns.toList k v (by simpa using h1)]
-  simp only [Vector.getElem_toList, Int.sub_right_inj]
-  rw [getD_in_bounds h k h1]
+  simp only [BitHeap.eval, Vector.toList_set, BitHeap.setColumn,
+    hornersMethod_set env h.columns.toList k v (by simpa using h1),
+    Vector.getElem_toList, getD_in_bounds h k h1]
 
 @[grind => ]
 theorem eval_eraseColumn_eq_eval_sub (h : BitHeap w) (k : Nat) (env : BitEnv) (h1 : k < w) :
     (h.setColumn k (Column.empty) h1).eval env
       = h.eval env - 2 ^ k * ((h.get k).eval env : Int) := by
-  simp only [BitHeap.eval, Vector.toList_set, BitHeap.setColumn]
-  rw [hornersMethod_set env h.columns.toList k (Column.empty) (by simpa using h1)]
-  simp only [empty_eval_zero, Int.cast_ofNat_Int, Int.mul_zero, Int.add_zero, Vector.getElem_toList,
-    Int.sub_right_inj]
-  rw [getD_in_bounds h k h1]
+  simp only [BitHeap.eval, Vector.toList_set, BitHeap.setColumn,
+    hornersMethod_set env h.columns.toList k (Column.empty) (by simpa using h1),
+    empty_eval_zero, Int.cast_ofNat_Int, Int.mul_zero, Int.add_zero, Vector.getElem_toList,
+    getD_in_bounds h k h1]
 
 theorem eval_insertColumn (h : BitHeap w) (k : Nat) (col : Column) (env : BitEnv) (h1 : k < w) :
     (h.setColumn k col h1).eval env
@@ -164,7 +162,7 @@ theorem eval_eraseColumn (h : BitHeap w) (k : Nat) (env : BitEnv) (h1 : k < w) :
   have := eval_eraseColumn_eq_eval_sub h k env h1
   grind only
 
-theorem if_elem_not_empty (col : Nat) (c : Circuit) (h : BitHeap w) :
+theorem is_elem_in_bounds (col : Nat) (c : Circuit) (h : BitHeap w) :
    (c ∈ h.get col) → (col < w) := by
   intro h1
   by_contra hge
@@ -186,26 +184,23 @@ theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap w) (env
         · rw [Int.add_sub_assoc]
           have hidx : ∀ (hb : column < w), h.columns[column] = h.columns.toList[column]'(by grind) := by
             simp [Vector.getElem_toList]
-          rw [hidx]
-          rw [Int.natCast_sub]
+          rw [hidx, Int.natCast_sub]
           · cases c.eval env <;> simp_all <;> grind
-          · simp [Column.eval]
-            rw [Std.HashSet.fold_eq_foldl_toList]
-            simp [Column.foldl_sum]
+          · simp [Column.eval, Std.HashSet.fold_eq_foldl_toList, Column.foldl_sum]
             apply List.single_le_sum
             · intro hx hy
               exact Nat.zero_le hx
             · simp
               use c
               constructor
-              · rw [getD_in_bounds h column (by exact if_elem_not_empty column c h h1)] at h1
-                simp [Column.mem_iff_contains, Column.contains] at h1
+              · rw [getD_in_bounds h column (by exact is_elem_in_bounds column c h h1),
+                    Column.mem_iff_contains, Column.contains] at h1
                 exact h1
               · rfl
-        · exact if_elem_not_empty column c h h1
+        · exact is_elem_in_bounds column c h h1
       · exact h1
     · simp
-      exact if_elem_not_empty column c h h1
+      exact is_elem_in_bounds column c h h1
   rw [this]
 
 @[simp]
@@ -218,8 +213,7 @@ theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : 
       generalize hvi : c.eval env = vi
       rcases vi
       · simp
-      · simp only [Bool.toInt_true]
-        rw [Int.mul_one]
+      · simp only [Bool.toInt_true, Int.mul_one]
         apply Int.emod_eq_zero_of_dvd
         have : (2:Nat)^w ∣ (2:Nat)^col := Nat.pow_dvd_pow 2 h1
         exact Int.natAbs_dvd_natAbs.mp this
@@ -227,22 +221,16 @@ theorem evalMod_heap_addBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : 
   | case2 column h h4 h3 col h1 =>
     simp only [evalMod, Int.emod_add_emod]
     have : (h.setColumn column (col.insert c) h3).eval env = (h.eval env + 2 ^ column * (c.eval env).toInt) := by
-      rw [eval_insertColumn]
-      rw [eval_eraseColumn h column env h3]
-      rw [Column.eval_insert]
+      rw [eval_insertColumn, eval_eraseColumn h column env h3, Column.eval_insert]
       · push_cast
         cases c.eval env <;> simp <;> grind
       · simp_all
     rw [this]
   | case3 col h h4 h3 h2 h1 ih =>
-    rw [ih]
-    rw [evalMod_heap_removeBit]
+    rw [ih, evalMod_heap_removeBit]
     have : (- 2 ^ col * (c.eval env).toInt + 2 ^ (col + 1) * (c.eval env).toInt) = 2 ^ col * (c.eval env).toInt := by grind
     rw [← this]
-    simp_all -- this looks very ugly
-    grind
-    simp_all
-    grind
+    all_goals (simp_all; grind)
 
 theorem get_removeBit_self (column : Nat) (c : Circuit) (h : BitHeap w) (hb : column < w) :
     (removeBit column c h).get column = (h.get column).erase c := by
