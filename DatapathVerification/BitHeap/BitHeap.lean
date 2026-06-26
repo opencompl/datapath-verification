@@ -136,7 +136,10 @@ theorem hornersMethod_set (env : BitEnv) (l : List Column) (k : Nat) (v : Column
 theorem eval_insertColumn_eq_eval_add (h : BitHeap w) (k : Nat) (v : Column) (env : BitEnv) (h1 : k < w) :
     (h.setColumn k v h1).eval env
       = h.eval env + 2 ^ k * (v.eval env : Int) - 2 ^ k * ((h.get k).eval env : Int) := by
-  simp only [BitHeap.eval, Vector.toList_set, BitHeap.setColumn, hornersMethod_set env h.columns.toList k v (by simpa using h1), Vector.getElem_toList, getD_in_bounds h k h1]
+  simp only [BitHeap.eval, Vector.toList_set, BitHeap.setColumn]
+  rw [hornersMethod_set env h.columns.toList k v (by simpa using h1)]
+  simp only [Vector.getElem_toList, Int.sub_right_inj]
+  rw [getD_in_bounds h k h1]
 
 @[grind => ]
 theorem eval_eraseColumn_eq_eval_sub (h : BitHeap w) (k : Nat) (env : BitEnv) (h1 : k < w) :
