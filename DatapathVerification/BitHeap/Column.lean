@@ -1,5 +1,6 @@
 import Std.Data.HashSet
 import DatapathVerification.BitHeap.Circuit
+import DatapathVerification.BitHeap.HashSetLemmas
 
 namespace BitHeap
 
@@ -46,6 +47,12 @@ def height (col : Column) : Nat :=
 @[simp]
 theorem height_eq_size (col : Column) : col.height = col.elems.size := rfl
 
+@[simp]
+theorem empty_eval_zero (col : Column) (env : BitEnv) (h : col = Column.empty) : col.eval env = 0 := by
+  simp_all [eval, empty]
+  rw [Std.HashSet.fold_eq_foldl_toList]
+  simp
+
 def toList (col : Column) : List Circuit :=
   col.elems.toList
 
@@ -62,15 +69,24 @@ theorem foldl_sum (l : List Circuit) (env : BitEnv) (a : Nat) :
 
 @[simp]
 theorem eval_erase (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :
-    (col.erase c).eval env = col.eval env - (c.eval env).toInt := by
+    (col.erase c).eval env = col.eval env - (c.eval env).toNat := by
   simp [eval, erase]
-  repeat rw [Std.HashSet.fold_eq_foldl_toList]
-  rw [eq_comm, Int.sub_eq_iff_eq_add']
-  repeat rw [foldl_sum]
+  repeat rw [Std.HashSet.fold_eq_foldl_toList, foldl_sum]
   simp only [Nat.zero_add]
-  have : col.elems.toList.Perm (c :: (col.elems.erase c).toList) := by
-    sorry
-  sorry
+  have hP1 : col.elems.toList.Perm (c :: (col.elems.erase c).toList) := by
+    have hP2: col.elems.toList.Perm (c :: col.elems.toList.filter (fun x => (x == c) = false)) := by
+      simp
+      have helem : c ∈ col.elems.toList := by
+        simpa
+      have hNp : col.elems.toList.Nodup := by
+        exact Std.HashSet.nodup_toList col.elems
+      have hFnp : (col.elems.toList.filter (fun x => (x == c) = false)).Nodup := by
+        exact List.filter_nodup hNp
+      grind
+    have : (col.elems.erase c).toList.Perm (col.elems.toList.filter (fun x => (x == c) = false)) := by
+      apply Std.HashSet.erase_toList_perm_filter_toList
+    grind
+  grind
 
 @[simp]
 theorem eval_insert (col : Column) (c : Circuit) (env : BitEnv) (h : c ∉ col) :
