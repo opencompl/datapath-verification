@@ -13,8 +13,8 @@ def env1 : BitEnv := fun n => n = 0 || n = 2 || n = 4
 
 -- A heap with width 3: only columns 0, 1, 2 contribute under evalMod.
 -- Bits in column 3 (and beyond) get truncated away.
-def heapWidth3 : BitHeap :=
-  let h : BitHeap := ⟨3, Std.HashMap.emptyWithCapacity 0⟩
+def heapWidth3 : BitHeap 3 :=
+  let h := BitHeap.empty 3
   let h := h.addBit 0 (Circuit.bit 0)
   let h := h.addBit 1 (Circuit.bit 1)
   let h := h.addBit 2 (Circuit.bit 2)
@@ -38,13 +38,6 @@ info: 5
 
 -- Now with bit 3 set (env2 sets bits 0, 2, 3)
 def env2 : BitEnv := fun n => n = 0 || n = 2 || n = 3
-
--- Full eval: 1 + 0 + 4 + 8 = 13
-/--
-info: 13
--/
-#guard_msgs in
-#eval heapWidth3.eval (show BitEnv from env2)
 
 -- evalMod: 13 mod 8 = 5 (the bit-3 contribution is truncated)
 /--

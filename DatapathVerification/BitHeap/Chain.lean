@@ -28,19 +28,19 @@ def printSummary (adders : List Adder) : String :=
   s!"FAs: {fa}, HAs: {ha}"
 
 /-- Apply an adder to a bit heap returning the updated heap -/
-def applyAdder (adder : Adder) (h : BitHeap) : BitHeap :=
+def applyAdder (adder : Adder) (h : BitHeap w) : BitHeap w :=
   match adder with
   | .halfAdder column i j => (h.halfAdder column i j).heap
   | .fullAdder column i j k => (h.fullAdder column i j k).heap
 
 /-- Apply a list of adders, from front to the back -/
-def applyChain (adders : List Adder) (h : BitHeap) : BitHeap :=
+def applyChain (adders : List Adder) (h : BitHeap w) : BitHeap w :=
   match adders with
   | [] => h
   | s :: rest => applyChain rest (applyAdder s h)
 
 /-- Preconditions for each step in the chain -/
-def ChainPreconditions (steps : List Adder) (h : BitHeap) : Prop :=
+def ChainPreconditions (steps : List Adder) (h : BitHeap w) : Prop :=
   match steps with
   | [] => True
   | s :: rest =>
@@ -52,11 +52,9 @@ def ChainPreconditions (steps : List Adder) (h : BitHeap) : Prop :=
              ∧ i ≠ j ∧ i ≠ k ∧ j ≠ k)
       ∧ ChainPreconditions rest (applyAdder s h)
 
-/-- Main correctness theorem for the chain.
-    Applying the chain preserves the heap's value under all evaluation environments -/
-theorem applyChain_correct (steps : List Adder) (h : BitHeap)
+theorem applyChain_correct_mod (steps : List Adder) (h : BitHeap w)
   (hwf : ChainPreconditions steps h) :
-  ∀ (env : BitEnv), (applyChain steps h).eval env = h.eval env := by
+  ∀ (env : BitEnv), (applyChain steps h).evalMod env = h.evalMod env := by
   intros env
   induction steps generalizing h with
   | nil => rfl
@@ -66,33 +64,13 @@ theorem applyChain_correct (steps : List Adder) (h : BitHeap)
     rw [ih]
     cases s with
     | halfAdder =>
-      simp [applyAdder, halfAdder_correct, hwf]
+      simp [applyAdder, halfAdder_correct_mod, hwf]
     | fullAdder =>
-      simp [applyAdder, fullAdder_correct, hwf]
-    grind
-
-@[simp]
-theorem applyChain_preserves_width (steps : List Adder) (h : BitHeap) : (applyChain steps h).width = h.width := by
-  induction steps generalizing h with
-  | nil => rfl
-  | cons s rest ih =>
-    simp [applyChain]
-    cases s with
-    | halfAdder =>
-      simp [applyAdder, ih]
-    | fullAdder =>
-      simp [applyAdder, ih]
-
-theorem applyChain_correct_mod (steps : List Adder) (h : BitHeap)
-  (hwf : ChainPreconditions steps h) :
-  ∀ (env : BitEnv), (applyChain steps h).evalMod env = h.evalMod env := by
-  intros env
-  simp [evalMod]
-  rw [applyChain_correct]
-  grind
+      simp [applyAdder, fullAdder_correct_mod, hwf]
+    · grind
 
 /-- Check if a single step of the chain is applicable -/
-def isApplicable (step: Adder) (h : BitHeap) : Bool :=
+def isApplicable (step: Adder) (h : BitHeap w) : Bool :=
   match step with
     | .halfAdder col i j =>
       let column := h.get col
@@ -102,7 +80,7 @@ def isApplicable (step: Adder) (h : BitHeap) : Bool :=
       column.contains i && column.contains j && column.contains k && i != j && i != k && j != k
 
 /-- Apply a chain of adders if they are applicable, otherwise return none -/
-def applyChainSafe (steps : List Adder) (h : BitHeap) : Option BitHeap :=
+def applyChainSafe (steps : List Adder) (h : BitHeap w) : Option (BitHeap w) :=
   match steps with
   | [] => some h
   | s :: rest =>
@@ -111,10 +89,10 @@ def applyChainSafe (steps : List Adder) (h : BitHeap) : Option BitHeap :=
     else
       none
 
-/-- If a chain of adders is applicable (it does not return none), then it preserves the heap's value -/
-theorem applyChainSafe_correct (steps : List Adder) (h h' : BitHeap) (env : BitEnv)
+theorem applyChainSafe_correct_mod (steps : List Adder) (h h' : BitHeap w)
     (heq : applyChainSafe steps h = some h') :
-    h'.eval env = h.eval env := by
+   ∀ (env : BitEnv), h'.evalMod env = h.evalMod env := by
+  intros env
   induction steps generalizing h with
   | nil =>
     simp [applyChainSafe] at heq
@@ -129,40 +107,10 @@ theorem applyChainSafe_correct (steps : List Adder) (h h' : BitHeap) (env : BitE
       simp at hleft
     | halfAdder =>
       obtain ⟨⟨i_in_col, j_in_col⟩, not_eq⟩ := hleft
-      rw [halfAdder_correct _ _ _ _ i_in_col j_in_col not_eq]
+      rw [halfAdder_correct_mod _ _ _ _ i_in_col j_in_col not_eq]
     | fullAdder =>
       obtain ⟨⟨⟨⟨⟨hi, hj⟩, hk⟩, hij⟩, hik⟩, hjk⟩ := hleft
-      exact fullAdder_correct _ _ _ _ _ hi hj hk hij hik hjk env
-
-@[simp]
-theorem applyChainSafe_preserves_width (steps : List Adder) (h h' : BitHeap)
-    (heq : applyChainSafe steps h = some h') :
-    h'.width = h.width := by
-  induction steps generalizing h with
-  | nil =>
-    simp [applyChainSafe] at heq
-    rw [heq]
-  | cons s rest ih =>
-    simp [applyChainSafe] at heq
-    obtain ⟨hleft, hright⟩ := heq
-    have ih_applied := ih (applyAdder s h) hright
-    rw [ih_applied]
-    simp_all [applyAdder, isApplicable]
-    cases s with
-      simp at hleft
-    | halfAdder =>
-      obtain ⟨⟨i_in_col, j_in_col⟩, not_eq⟩ := hleft
-      rw [halfAdder_preserves_width _ _ _]
-    | fullAdder =>
-      obtain ⟨⟨⟨⟨⟨hi, hj⟩, hk⟩, hij⟩, hik⟩, hjk⟩ := hleft
-      rw [fullAdder_preserves_width _ _ _]
-
-theorem applyChainSafe_correct_mod (steps : List Adder) (h h' : BitHeap) (env : BitEnv)
-    (heq : applyChainSafe steps h = some h') :
-    h'.evalMod env = h.evalMod env := by
-  simp [evalMod]
-  rw [applyChainSafe_correct steps h h' env heq]
-  rw [applyChainSafe_preserves_width steps h h' heq]
+      rw [fullAdder_correct_mod _ _ _ _ _ hi hj hk hij hik hjk env]
 
 end Chain
 

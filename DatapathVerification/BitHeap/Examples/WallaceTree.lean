@@ -12,8 +12,8 @@ namespace WallaceTreeExamples
 
 abbrev BitEnv := Nat → Bool
 
-def pp4 : BitHeap := bitHeapOfPartialProducts 4
-def pp8 : BitHeap := bitHeapOfPartialProducts 8
+def pp4 : BitHeap 8 := bitHeapOfPartialProducts 4
+def pp8 : BitHeap 16 := bitHeapOfPartialProducts 8
 /--
 info: [1, 2, 3, 4, 3, 2, 1]
 -/
@@ -66,10 +66,10 @@ info: [1, 1, 1, 2, 2, 2, 2, 1]
 #eval (WallaceTree.WallaceTree pp8).2.length
 
 /--
-info: [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1]
+info: [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 -/
 #guard_msgs in
-#eval (List.range 17).map (fun c => ((WallaceTree.WallaceTree pp8).1.get c).height)
+#eval (List.range 16).map (fun c => ((WallaceTree.WallaceTree pp8).1.get c).height)
 
 #eval (WallaceTree.WallaceTree pp8).2
 end WallaceTreeExamples
