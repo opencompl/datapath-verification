@@ -67,18 +67,25 @@ theorem foldl_sum (l : List Circuit) (env : BitEnv) (a : Nat) :
   | cons p ps ih =>
     grind
 
-theorem Std.HashSet.erase_toList_perm_filter_toList [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
-  (m : Std.HashSet α) :
-    (m.erase d).toList.Perm (m.toList.filter (fun x => (x == d) = false)) := by
-  sorry
-
+@[simp]
 theorem eval_erase (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :
     (col.erase c).eval env = col.eval env - (c.eval env).toNat := by
   simp [eval, erase]
   repeat rw [Std.HashSet.fold_eq_foldl_toList, foldl_sum]
   simp only [Nat.zero_add]
-  have : col.elems.toList.Perm (c :: (col.elems.erase c).toList) := by
-    sorry
+  have hP1 : col.elems.toList.Perm (c :: (col.elems.erase c).toList) := by
+    have hP2: col.elems.toList.Perm (c :: col.elems.toList.filter (fun x => (x == c) = false)) := by
+      simp
+      have helem : c ∈ col.elems.toList := by
+        simpa
+      have hNp : col.elems.toList.Nodup := by
+        exact Std.HashSet.nodup_toList col.elems
+      have hFnp : (col.elems.toList.filter (fun x => (x == c) = false)).Nodup := by
+        exact List.filter_nodup hNp
+      grind
+    have : (col.elems.erase c).toList.Perm (col.elems.toList.filter (fun x => (x == c) = false)) := by
+      apply Std.HashSet.erase_toList_perm_filter_toList
+    grind
   grind
 
 @[simp]

@@ -3,6 +3,8 @@ import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.Column
 import Mathlib.Tactic.SplitIfs
 import Mathlib.Algebra.Divisibility.Basic
+import Mathlib.Algebra.Order.BigOperators.Group.List
+import Mathlib.Algebra.Order.Group.Nat
 
 structure BitHeap (width : Nat) where
   columns : Vector BitHeap.Column width
@@ -152,7 +154,7 @@ theorem eval_eraseColumn (h : BitHeap w) (k : Nat) (env : BitEnv) (h1 : k < w) :
     h.eval env
       = ({ columns := h.columns.set k (Column.empty) h1} : BitHeap w).eval env + 2 ^ k * ((h.get k).eval env : Nat) := by
   have := eval_eraseColumn_eq_eval_sub h k env h1
-  grind
+  grind only
 
 theorem if_elem_not_empty (col : Nat) (c : Circuit) (h : BitHeap w) :
    (c ∈ h.get col) → (col < w) := by
@@ -180,10 +182,18 @@ theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap w) (env
           rw [Int.natCast_sub]
           · cases c.eval env <;> simp_all <;> grind
           · simp [Column.eval]
-            cases c.eval env <;> simp
             rw [Std.HashSet.fold_eq_foldl_toList]
             simp [Column.foldl_sum]
-            sorry
+            apply List.single_le_sum
+            · intro hx hy
+              exact Nat.zero_le hx
+            · simp
+              use c
+              constructor
+              · rw [getD_in_bounds h column (by exact if_elem_not_empty column c h h1)] at h1
+                simp [Column.mem_iff_contains, Column.contains] at h1
+                exact h1
+              · rfl
         · exact if_elem_not_empty column c h h1
       · exact h1
     · simp

@@ -34,6 +34,15 @@ theorem Std.HashMap.nodup_toList [BEq α] [Hashable α] [EquivBEq α] [LawfulHas
   apply List.Pairwise.of_map _ _ this
   simp
 
+theorem Std.HashSet.nodup_toList [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
+  (m : Std.HashSet α) :
+    m.toList.Nodup := by
+  simp [toList, ← HashMap.map_fst_toList_eq_keys]
+  rw [List.nodup_iff_pairwise_ne]
+  apply List.Pairwise.map (fun (x : α × Unit) => x.1) (R := fun a b => a ≠ b)
+  · grind
+  · apply HashMap.nodup_toList
+
 theorem Std.HashMap.erase_toList_perm_filter_toList [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
   (m : HashMap α β) :
     (m.erase d).toList.Perm (m.toList.filter (fun x => (x.1 == d) = false)) := by
