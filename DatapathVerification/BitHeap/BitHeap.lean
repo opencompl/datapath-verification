@@ -154,7 +154,6 @@ theorem eval_eraseColumn (h : BitHeap w) (k : Nat) (env : BitEnv) (h1 : k < w) :
   have := eval_eraseColumn_eq_eval_sub h k env h1
   grind
 
-
 theorem if_elem_not_empty (col : Nat) (c : Circuit) (h : BitHeap w) :
    (c ∈ h.get col) → (col < w) := by
   intro h1
@@ -162,8 +161,8 @@ theorem if_elem_not_empty (col : Nat) (c : Circuit) (h : BitHeap w) :
   simp at hge
   have hempty : h.get col = Column.empty := by
     simp [get, Vector.getD, hge]
-  rw [hempty, mem_iff_contains, Column.empty, Column.contains] at h1
-  grind
+  rw [hempty, mem_iff_contains, Column.empty, Column.contains, Std.HashSet.contains_emptyWithCapacity] at h1
+  contradiction
 
 @[simp]
 theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap w) (env : BitEnv) (h1 : c ∈ h.get column) :
@@ -173,16 +172,20 @@ theorem evalMod_heap_removeBit (column : Nat) (c : Circuit) (h : BitHeap w) (env
     simp only [eval, Vector.toList_setIfInBounds]
     rw [hornersMethod_set]
     · rw [eval_erase]
-      ·
-        rw [getD_in_bounds h column]
-        ·
-          push_cast
-          sorry
+      · rw [getD_in_bounds h column]
+        · rw [Int.add_sub_assoc]
+          have hidx : ∀ (hb : column < w), h.columns[column] = h.columns.toList[column]'(by grind) := by
+            simp [Vector.getElem_toList]
+          rw [hidx]
+          rw [Int.natCast_sub]
+          · cases c.eval env <;> simp_all <;> grind
+          · simp [Column.eval]
+            cases c.eval env <;> simp
+            sorry
         · exact if_elem_not_empty column c h h1
       · exact h1
     · simp
       exact if_elem_not_empty column c h h1
-
   rw [this]
 
 @[simp]
