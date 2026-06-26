@@ -1,6 +1,6 @@
 import DatapathVerification.BitHeap.BitHeap
 import DatapathVerification.BitHeap.Chain
-import DatapathVerification.BitHeap.WallaceTree
+import DatapathVerification.BitHeap.Compressors.WallaceTree
 
 namespace BitHeap
 

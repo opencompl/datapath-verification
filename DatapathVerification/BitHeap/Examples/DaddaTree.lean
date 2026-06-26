@@ -1,6 +1,6 @@
 import DatapathVerification.BitHeap.BitHeap
 import DatapathVerification.BitHeap.Chain
-import DatapathVerification.BitHeap.DaddaTree
+import DatapathVerification.BitHeap.Compressors.DaddaTree
 import DatapathVerification.BitHeap.Examples.PartialProductGenerator
 
 namespace BitHeap
