@@ -91,6 +91,30 @@ def addBit (column : Nat) (c : Circuit) (h : BitHeap w) : BitHeap w :=
       h.setColumn column (col.insert c) h1
       else addBit (column + 1) c (h.removeBit column c)
 
+-- TODO: make this variable size add
+def addBitHeap' (h1 h2 : BitHeap w) : BitHeap w:=
+  let h := BitHeap.empty w
+  let h := h1.columns.zipIdx.foldl (fun acc (column, index) =>
+             column.elems.toList.foldl (fun acc' c => acc'.addBit index c) acc) h
+  let h := h2.columns.zipIdx.foldl (fun acc (column, index) =>
+             column.elems.toList.foldl (fun acc' c => acc'.addBit index c) acc) h
+  h
+
+def addBitHeap (bhs : List (BitHeap w)) : BitHeap w:=
+  let h := BitHeap.empty w
+  let h := bhs.foldl (fun acc heap => heap.columns.zipIdx.foldl (fun acc' (column, index) =>
+             column.elems.toList.foldl (fun acc' c => acc'.addBit index c) acc') acc) h
+  h
+
+def mulBitHeap (h0 h1 : BitHeap w) : BitHeap (2 * w - 1) :=
+  let h := BitHeap.empty (2 * w - 1)
+  let h := h0.columns.zipIdx.foldl (fun acc (column0, i0) =>
+             h1.columns.zipIdx.foldl (fun acc' (column1, i2) =>
+               column0.elems.toList.foldl (fun acc'' c1 =>
+                 column1.elems.toList.foldl (fun acc''' c2 =>
+                   acc'''.addBit (i0 + i2) (Circuit.binop .and c1 c2)) acc'') acc') acc) h
+  h
+
 structure AdderResult (w : Nat) where
   heap : BitHeap w
   sum : Circuit
