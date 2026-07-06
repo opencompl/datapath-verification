@@ -29,6 +29,23 @@ def HornersMethod (env : BitEnv) : List Column → Nat
   | [] => 0
   | c :: rest => (c.eval env) + 2 * HornersMethod env rest
 
+-- Basically eval_insertColumn_eq_eval_add, but for HornersMethod. Adding a new column to a list is equivalent
+-- to adding the new column's evaluation to the old evaluation, and subtracting the old column's evaluation.
+theorem hornersMethod_set (env : BitEnv) (l : List Column) (k : Nat) (v : Column) (hk : k < l.length) :
+    (HornersMethod env (l.set k v) : Int)
+      = HornersMethod env l + 2^k * (v.eval env : Int) - 2^k * ((l[k]'hk).eval env : Int) := by
+  induction l generalizing k with
+  | nil =>
+    simp at hk
+  | cons c cs ih =>
+    cases k with
+    | zero =>
+      simp [HornersMethod, List.set]
+      grind
+    | succ j =>
+      simp [HornersMethod]
+      grind
+
 /--
 Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
@@ -91,14 +108,13 @@ def addBit (column : Nat) (c : Circuit) (h : BitHeap w) : BitHeap w :=
       h.setColumn column (col.insert c) h1
       else addBit (column + 1) c (h.removeBit column c)
 
--- TODO: make this variable size add
-def addBitHeap' (h1 h2 : BitHeap w) : BitHeap w:=
-  let h := BitHeap.empty w
-  let h := h1.columns.zipIdx.foldl (fun acc (column, index) =>
-             column.elems.toList.foldl (fun acc' c => acc'.addBit index c) acc) h
-  let h := h2.columns.zipIdx.foldl (fun acc (column, index) =>
-             column.elems.toList.foldl (fun acc' c => acc'.addBit index c) acc) h
-  h
+def truncate (h : BitHeap w) (n : Nat) (hn : n ≤ w) : BitHeap n :=
+  ⟨Vector.ofFn (fun i => h.columns[i]'(by omega))⟩
+
+theorem evalMod_truncate (h : BitHeap w) (n : Nat) (hn : n ≤ w) (env : BitEnv) :
+    (h.truncate n hn).evalMod env = (h.eval env) % 2^n := by
+  simp [evalMod, eval, truncate]
+  sorry
 
 def addBitHeap (bhs : List (BitHeap w)) : BitHeap w:=
   let h := BitHeap.empty w
@@ -138,23 +154,6 @@ def fullAdder (column : Nat) (i j k : Circuit) (h : BitHeap w) : AdderResult w :
   let h := h.addBit column sum
   let h := h.addBit (column + 1) carry
   ⟨h, sum, carry⟩
-
--- Basically eval_insertColumn_eq_eval_add, but for HornersMethod. Adding a new column to a list is equivalent
--- to adding the new column's evaluation to the old evaluation, and subtracting the old column's evaluation.
-theorem hornersMethod_set (env : BitEnv) (l : List Column) (k : Nat) (v : Column) (hk : k < l.length) :
-    (HornersMethod env (l.set k v) : Int)
-      = HornersMethod env l + 2^k * (v.eval env : Int) - 2^k * ((l[k]'hk).eval env : Int) := by
-  induction l generalizing k with
-  | nil =>
-    simp at hk
-  | cons c cs ih =>
-    cases k with
-    | zero =>
-      simp [HornersMethod, List.set]
-      grind
-    | succ j =>
-      simp [HornersMethod]
-      grind
 
 @[grind => ]
 theorem eval_insertColumn_eq_eval_add (h : BitHeap w) (k : Nat) (v : Column) (env : BitEnv) (h1 : k < w) :

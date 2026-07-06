@@ -136,6 +136,12 @@ info: {0 ↦ [(b0 ∧ b4)], 1 ↦ [(b0 ∧ b5), (b1 ∧ b4)], 2 ↦ [(b1 ∧ b5)
 #guard_msgs in
 #eval mulBitHeap exampleHeap1 exampleHeap2
 
+/--
+info: {0 ↦ [b8], 1 ↦ [b9]}
+-/
+#guard_msgs in
+#eval truncate exampleHeap3 2 (by omega)
+
 end Examples
 
 end BitHeap
