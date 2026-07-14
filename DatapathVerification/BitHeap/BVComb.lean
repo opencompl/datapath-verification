@@ -24,13 +24,15 @@ inductive ArithCircuit : Nat → Type
   -- | arithunop (kind : ArithUnopKind) (width : Nat) (arg : ArithCircuit)
   -- | bvbinop (kind : BooleanBinopKind) (width : Nat) (l r : ArithCircuit)
 
+def BitVecEnv (w : Nat) := Nat → BitVec w
+
 /--
 Convert a bitheap into a new bitheap that has a single row,
 by using the naive compression algorithm.
 -/
 def BitHeap.toSingleRow (bh : BitHeap w) : CircuitVector :=
-    let (pp1, pp2) := NaiveCompression.naiveCompression bh
-    sorry
+    let (pp1, _) := NaiveCompression.naiveCompression bh
+    pp1.columns.toArray.map fun col => col.elems.toList.headD (.const false)
 
 namespace ArithCircuit
 /--
@@ -50,25 +52,14 @@ def toBitHeap : ArithCircuit w → BitHeap w
   | .add args => BitHeap.addBitHeap (args.map toBitHeap)
   | .mul l r => BitHeap.truncate ((toBitHeap l).mulBitHeap (toBitHeap r)) w (by omega)
 
--- def toBitHeap' (c : ArithCircuit) : BitHeap w :=
---   match c with
---   | .var width varIndex => bitheapOfVar width varIndex
---   | .add width args => BitHeap.addBitHeap (args.map toBitHeap)
---   | .mul width l r => BitHeap.truncate ((toBitHeap l).mulBitHeap (toBitHeap r)) width (by omega)
-  -- | .arithunop kind width arg =>`
-  --   match kind with
-  --   | .neg => (toBitHeap arg).negBitHeap
-  -- | .bvbinop kind width l r =>
-  --   match kind with
-  --   | .and =>
-  --     let lRow := (l.toBitHeap).toSingleRow
-  --     let rRow := (r.toBitHeap).toSingleRow
-  --     let newRow := Array.zipWith (fun lBit rBit => Circuit.and lBit rBit) lRow rRow
-  --     BitHeap.fromRow newRow
+def denote (ρ : BitVecEnv w) : ArithCircuit w → BitVec w
+  | .var i => ρ i
+  | .add args => (args.map (denote ρ)).foldl (· + ·) 0
+  | .mul l r => denote ρ l * denote ρ r
 
 def toCircuitVector (c : ArithCircuit w) : CircuitVector :=
   let bh := c.toBitHeap
-  bh.toSingleRow
+  BitHeap.toSingleRow bh
 
 end ArithCircuit
 
