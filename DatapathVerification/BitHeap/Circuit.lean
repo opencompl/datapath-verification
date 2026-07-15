@@ -36,7 +36,7 @@ def numVars (c : Circuit) : Nat :=
   | .const _ => 0
 
 /-- An environment assigns a value to each bit, where bits are given by natural number indexes. -/
-def BitEnv := Nat → Bool
+abbrev BitEnv := Nat → Bool
 
 /-- Evaluate a circuit under a given environment. -/
 def eval (c : Circuit) (env : BitEnv) : Bool :=

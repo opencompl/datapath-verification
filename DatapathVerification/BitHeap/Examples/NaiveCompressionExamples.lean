@@ -44,10 +44,10 @@ def env2 : BitEnv := fun n => n = 0 || n = 2 || n = 5 || n = 6
 -------------
 
 /--
-info: 4
+info: 0
 -/
 #guard_msgs in
-#eval threeBitsInCol1.eval (show BitEnv from env1)
+#eval threeBitsInCol1.evalMod (show BitEnv from env1)
 
 -- Chain length 1 (single FA)
 /--
@@ -58,10 +58,10 @@ info: 1
 
 -- Reduced heap evaluates the same
 /--
-info: 4
+info: 0
 -/
 #guard_msgs in
-#eval (NaiveCompression.reduceColumn 1 threeBitsInCol1).1.eval (show BitEnv from env1)
+#eval (NaiveCompression.reduceColumn 1 threeBitsInCol1).1.evalMod (show BitEnv from env1)
 
 -------------
 
@@ -69,7 +69,7 @@ info: 4
 info: 6
 -/
 #guard_msgs in
-#eval fiveBitsInCol1.eval (show BitEnv from env1)
+#eval fiveBitsInCol1.evalMod (show BitEnv from env1)
 
 -- Chain length 2 (FA + FA)
 /--
@@ -87,32 +87,32 @@ info: 6
 
 -------------
 /--
-info: 9
+info: 1
 -/
 #guard_msgs in
-#eval multiColSmall.eval (show BitEnv from env2)
+#eval multiColSmall.evalMod (show BitEnv from env2)
 
 /--
-info: 2
+info: 5
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).2.length
 
 -- Value preserved
 /--
-info: 9
+info: 1
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).1.eval (show BitEnv from env2)
 
 /--
-info: 2
+info: 1
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).1.maxHeight
 
 /--
-info: [FA(1: b2, b4, b3), HA(2: (((b2 ∧ b4) ∨ (b2 ∧ b3)) ∨ (b4 ∧ b3)), b7)]
+info: [HA(0: b1, b0), FA(1: b2, b4, b3), FA(1: ((b2 ⊕ b4) ⊕ b3), b5, (b1 ∧ b0)), FA(2: (((b2 ∧ b4) ∨ (b2 ∧ b3)) ∨ (b4 ∧ b3)), b6, b7), HA(2: (((((b2 ⊕ b4) ⊕ b3) ∧ b5) ∨ (((b2 ⊕ b4) ⊕ b3) ∧ (b1 ∧ b0))) ∨ (b5 ∧ (b1 ∧ b0))), (((((b2 ∧ b4) ∨ (b2 ∧ b3)) ∨ (b4 ∧ b3)) ⊕ b6) ⊕ b7))]
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).2

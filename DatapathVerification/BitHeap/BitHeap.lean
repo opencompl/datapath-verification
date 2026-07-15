@@ -52,6 +52,16 @@ Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 def eval (h : BitHeap w) (env : BitEnv) : Nat :=
   HornersMethod env h.columns.toList
 
+@[simp]
+theorem empty_eval (env : BitEnv) : (empty w).eval env = 0 := by
+  simp [eval, empty]
+  induction w with
+  | zero =>
+    simp [HornersMethod]
+  | succ w ih =>
+    simp [List.replicate_succ, HornersMethod]
+    grind
+
 /--
 Evaluate a bit-heap modulo 2^width, to compute the final sum of all the bits in the heap.
 -/
