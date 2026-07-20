@@ -68,6 +68,10 @@ Evaluate a bit-heap modulo 2^width, to compute the final sum of all the bits in 
 def evalMod (h : BitHeap w) (env : BitEnv) : Int :=
   h.eval env % 2^(w)
 
+@[simp]
+theorem empty_evalMod (env : BitEnv) : (empty w).evalMod env = 0 := by
+  simp [evalMod, empty_eval]
+
 def get (h : BitHeap w) (column : Nat) : Column :=
   h.columns.getD column (Column.empty)
 
@@ -126,11 +130,12 @@ theorem evalMod_truncate (h : BitHeap w) (n : Nat) (hn : n ≤ w) (env : BitEnv)
   simp [evalMod, eval, truncate]
   sorry
 
-def addBitHeap (bhs : List (BitHeap w)) : BitHeap w:=
-  let h := BitHeap.empty w
-  let h := bhs.foldl (fun acc heap => heap.columns.zipIdx.foldl (fun acc' (column, index) =>
-             column.elems.toList.foldl (fun acc' c => acc'.addBit index c) acc') acc) h
-  h
+def mergeInto (acc h : BitHeap w) : BitHeap w :=
+  h.columns.zipIdx.foldl (fun acc' (col, idx) =>
+    col.elems.toList.foldl (fun a c => a.addBit idx c) acc') acc
+
+def addBitHeap (bhs : List (BitHeap w)) : BitHeap w :=
+  bhs.foldl mergeInto (BitHeap.empty w)
 
 def mulBitHeap (h0 h1 : BitHeap w) : BitHeap (2 * w - 1) :=
   let h := BitHeap.empty (2 * w - 1)
