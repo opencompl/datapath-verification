@@ -3,6 +3,7 @@ import DatapathVerification.BitHeap.Circuit
 import DatapathVerification.BitHeap.Column
 import Mathlib.Tactic.SplitIfs
 import Mathlib.Algebra.Divisibility.Basic
+import Mathlib.Data.Int.ModEq
 import Mathlib.Algebra.Order.BigOperators.Group.List
 import Mathlib.Algebra.Order.Group.Nat
 
@@ -125,10 +126,39 @@ def addBit (column : Nat) (c : Circuit) (h : BitHeap w) : BitHeap w :=
 def truncate (h : BitHeap w) (n : Nat) (hn : n ≤ w) : BitHeap n :=
   ⟨Vector.ofFn (fun i => h.columns[i]'(by omega))⟩
 
+theorem hornersMethod_take (env : BitEnv) (n : Nat) (l : List Column) :
+    ((HornersMethod env (l.take n) : Int)) % 2^n
+      = ((HornersMethod env l : Int)) % 2^n := by
+  induction n generalizing l with
+  | zero => simp
+  | succ m ih =>
+    cases l with
+    | nil => simp
+    | cons c cs =>
+      simp only [List.take_succ_cons, HornersMethod, Nat.cast_add, Nat.cast_mul,
+        Nat.cast_ofNat]
+      have h2 : (2 : Int) * (HornersMethod env (cs.take m))
+          ≡ 2 * (HornersMethod env cs) [ZMOD 2^(m+1)] := by
+        have hme : ((HornersMethod env (cs.take m) : Int))
+            ≡ (HornersMethod env cs : Int) [ZMOD 2^m] := ih cs
+        have hm2 := hme.mul_left' (c := 2)
+        rw [pow_succ, mul_comm ((2:Int)^m) 2]
+        exact hm2
+      exact (Int.ModEq.refl _).add h2
+
+theorem truncate_columns_toList (h : BitHeap w) (n : Nat) (hn : n ≤ w) :
+    (h.truncate n hn).columns.toList = h.columns.toList.take n := by
+  apply List.ext_getElem
+  · simp [truncate]
+    omega
+  · intro i h1 h2
+    simp only [truncate, Fin.getElem_fin, Vector.getElem_toList, Vector.getElem_ofFn,
+      List.getElem_take]
+
 theorem evalMod_truncate (h : BitHeap w) (n : Nat) (hn : n ≤ w) (env : BitEnv) :
     (h.truncate n hn).evalMod env = (h.eval env) % 2^n := by
-  simp [evalMod, eval, truncate]
-  sorry
+  simp only [evalMod, eval]
+  simp [hornersMethod_take, truncate_columns_toList]
 
 def mergeInto (acc h : BitHeap w) : BitHeap w :=
   h.columns.zipIdx.foldl (fun acc' (col, idx) =>
@@ -137,14 +167,16 @@ def mergeInto (acc h : BitHeap w) : BitHeap w :=
 def addBitHeap (bhs : List (BitHeap w)) : BitHeap w :=
   bhs.foldl mergeInto (BitHeap.empty w)
 
+def mulColumns (acc : BitHeap v) (col0 col1 : Column) (idx : Nat) : BitHeap v :=
+  col0.elems.toList.foldl (fun a c1 =>
+    col1.elems.toList.foldl (fun a' c2 =>
+      a'.addBit idx (.binop .and c1 c2)) a) acc
+
 def mulBitHeap (h0 h1 : BitHeap w) : BitHeap (2 * w - 1) :=
-  let h := BitHeap.empty (2 * w - 1)
-  let h := h0.columns.zipIdx.foldl (fun acc (column0, i0) =>
-             h1.columns.zipIdx.foldl (fun acc' (column1, i2) =>
-               column0.elems.toList.foldl (fun acc'' c1 =>
-                 column1.elems.toList.foldl (fun acc''' c2 =>
-                   acc'''.addBit (i0 + i2) (Circuit.binop .and c1 c2)) acc'') acc') acc) h
-  h
+  h0.columns.zipIdx.foldl (fun acc (col0, i0) =>
+    h1.columns.zipIdx.foldl (fun acc' (col1, i1) =>
+      mulColumns acc' col0 col1 (i0 + i1)) acc)
+    (BitHeap.empty (2 * w - 1))
 
 structure AdderResult (w : Nat) where
   heap : BitHeap w
