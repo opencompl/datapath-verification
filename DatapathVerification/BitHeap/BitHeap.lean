@@ -137,13 +137,13 @@ theorem hornersMethod_take (env : BitEnv) (n : Nat) (l : List Column) :
     | cons c cs =>
       simp only [List.take_succ_cons, HornersMethod, Nat.cast_add, Nat.cast_mul,
         Nat.cast_ofNat]
-      have h2 : (2 : Int) * (HornersMethod env (cs.take m))
-          ≡ 2 * (HornersMethod env cs) [ZMOD 2^(m+1)] := by
-        have hme : ((HornersMethod env (cs.take m) : Int))
-            ≡ (HornersMethod env cs : Int) [ZMOD 2^m] := ih cs
-        have hm2 := hme.mul_left' (c := 2)
-        rw [pow_succ, mul_comm ((2:Int)^m) 2]
-        exact hm2
+      have h2 : (2 : Int) * (HornersMethod env (cs.take m)) % 2^(m+1)
+          = 2 * (HornersMethod env cs) % 2^(m+1) := by
+        have hme : ((HornersMethod env (cs.take m) : Int)) % 2^(m)
+            = (HornersMethod env cs : Int) % 2^(m) := ih cs
+        simp only [pow_succ, mul_comm ((2 : Int) ^ m) 2, Int.reduceLT, Int.mul_emod_mul_of_pos,
+          mul_eq_mul_left_iff, OfNat.ofNat_ne_zero, or_false]
+        exact Int.ModEq.eq (ih cs)
       exact (Int.ModEq.refl _).add h2
 
 theorem truncate_columns_toList (h : BitHeap w) (n : Nat) (hn : n ≤ w) :
