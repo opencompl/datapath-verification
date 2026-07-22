@@ -139,8 +139,6 @@ theorem hornersMethod_take (env : BitEnv) (n : Nat) (l : List Column) :
         Nat.cast_ofNat]
       have h2 : (2 : Int) * (HornersMethod env (cs.take m)) % 2^(m+1)
           = 2 * (HornersMethod env cs) % 2^(m+1) := by
-        have hme : ((HornersMethod env (cs.take m) : Int)) % 2^(m)
-            = (HornersMethod env cs : Int) % 2^(m) := ih cs
         simp only [pow_succ, mul_comm ((2 : Int) ^ m) 2, Int.reduceLT, Int.mul_emod_mul_of_pos,
           mul_eq_mul_left_iff, OfNat.ofNat_ne_zero, or_false]
         exact Int.ModEq.eq (ih cs)
