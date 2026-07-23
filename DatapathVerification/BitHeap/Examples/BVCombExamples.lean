@@ -68,3 +68,29 @@ def testEnv : BitVecEnv 4 := fun i =>
 
 #eval toString ((ArithCircuit.var 3 : ArithCircuit 4).toBitHeap.mulBitHeap
         (ArithCircuit.var 3 : ArithCircuit 4).toBitHeap)
+
+------
+
+def compressed (c : ArithCircuit w) : BitHeap w := (DaddaTree.DaddaTree c.toBitHeap).1
+
+def addThree : ArithCircuit 4 := .add [.var 0, .var 1, .var 2]
+
+/-- info: "{0 ↦ [b4, b8, b0], 1 ↦ [b1, b5, b9], 2 ↦ [b2, b10, b6], 3 ↦ [b3, b11, b7]}" -/
+#guard_msgs in
+#eval toString addThree.toBitHeap
+
+/-- info: "{0 ↦ [(b4 ⊕ b8), b0], 1 ↦ [(b4 ∧ b8), ((b1 ⊕ b5) ⊕ b9)], 2 ↦ [(((b1 ∧ b5) ∨ (b1 ∧ b9)) ∨ (b5 ∧ b9)), ((b2 ⊕ b10) ⊕ b6)], 3 ↦ [(((b2 ∧ b10) ∨ (b2 ∧ b6)) ∨ (b10 ∧ b6)), ((b3 ⊕ b11) ⊕ b7)]}" -/
+#guard_msgs in
+#eval toString (compressed addThree)
+
+/-- info: "[HA(0: b4, b8), FA(1: b1, b5, b9), FA(2: b2, b10, b6), FA(3: b3, b11, b7)]" -/
+#guard_msgs in
+#eval toString (DaddaTree.DaddaTree addThree.toBitHeap).2
+
+/-- info: 13 -/
+#guard_msgs in
+#eval (compressed (.add [.var 0, .var 1, .var 2, .var 3] : ArithCircuit 4)).eval (BitVecEnv.toBitEnv testEnv)
+
+/-- info: 11 -/
+#guard_msgs in
+#eval (compressed (.mul (.var 2) (.var 3) : ArithCircuit 4)).eval (BitVecEnv.toBitEnv testEnv)
