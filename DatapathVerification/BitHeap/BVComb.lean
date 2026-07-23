@@ -286,6 +286,12 @@ theorem toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w) :
     rw [evalMod_truncateMod, BitVec.toNat_mul, mulBitHeap_evalMod, Int.emod_emod_of_dvd _ hdvd, Int.mul_emod, ih1, ih2]
     congr 1
 
+theorem compressed_toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w)
+    (adders : List Chain.Adder) (h' : BitHeap w)
+    (heq : Chain.applyChainSafe adders c.toBitHeap = some h') :
+    h'.evalMod bv.toBitEnv = ((c.denote bv).toNat : Int) := by
+  rw [Chain.applyChainSafe_correct_mod adders c.toBitHeap h' heq, toBitHeap_correct]
+
 end ArithCircuit
 
 end Comb
