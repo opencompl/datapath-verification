@@ -44,6 +44,9 @@ def erase (col : Column) (c : Circuit) : Column :=
 def height (col : Column) : Nat :=
   col.elems.size
 
+theorem toInt_and_eq_mul (a b : Bool) : (a && b).toInt = a.toInt * b.toInt := by
+  cases a <;> cases b <;> rfl
+
 @[simp]
 theorem height_eq_size (col : Column) : col.height = col.elems.size := rfl
 

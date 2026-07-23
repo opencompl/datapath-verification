@@ -47,6 +47,43 @@ theorem hornersMethod_set (env : BitEnv) (l : List Column) (k : Nat) (v : Column
       simp [HornersMethod]
       grind
 
+theorem hornersMethod_eq_sum_zipIdx (env : Circuit.BitEnv) (l : List Column) (s : Nat) :
+    (2^s : Int) * (HornersMethod env l : Int)
+      = ((l.zipIdx s).map (fun p =>
+          (p.1.elems.toList.map (fun c => 2^p.2 * (c.eval env).toInt)).sum)).sum := by
+  induction l generalizing s with
+  | nil =>
+    simp [HornersMethod]
+  | cons p ps ih =>
+    simp [HornersMethod, List.zipIdx_cons, List.map_cons, List.sum_cons]
+    rw [← ih]
+    rw [Int.mul_add]
+    have : 2 ^ s * (2 * ↑(HornersMethod env ps)) = 2 ^ (s + 1) * (HornersMethod env ps) := by
+      grind
+    norm_cast
+    simp [this, Column.eval_eq_sum]
+    induction p.elems.toList with
+    | nil =>
+      simp
+    | cons c tl ih' =>
+      simp only [List.map_cons, List.sum_cons]
+      grind
+
+theorem hornersMethod_mul_eq_sum_zipIdx (env : Circuit.BitEnv) (l : List Column) (i0 s : Nat) :
+    (2^(i0 + s) : Int) * (HornersMethod env l : Int)
+      = ((l.zipIdx s).map (fun q => 2^(i0 + q.2) * (q.1.eval env : Int))).sum := by
+  induction l generalizing s with
+  | nil =>
+    simp [HornersMethod]
+  | cons p ps ih =>
+    simp only [HornersMethod, List.zipIdx_cons, List.map_cons, List.sum_cons]
+    rw [← ih]
+    push_cast
+    have hpow : (2 : Int) ^ (i0 + (s + 1)) = 2 ^ (i0 + s) * 2 := by
+      rw [← Nat.add_assoc, pow_succ]
+    rw [hpow]
+    grind
+
 /--
 Evaluate a bit-heap, to compute the final sum of all the bits in the heap.
 -/
@@ -157,6 +194,10 @@ theorem evalMod_truncate (h : BitHeap w) (n : Nat) (hn : n ≤ w) (env : BitEnv)
     (h.truncate n hn).evalMod env = (h.eval env) % 2^n := by
   simp only [evalMod, eval]
   simp [hornersMethod_take, truncate_columns_toList]
+
+theorem evalMod_truncateMod (h : BitHeap w) (n : Nat) (hn : n ≤ w) (env : BitEnv) :
+    (h.truncate n hn).evalMod env = (h.evalMod env) % 2^n := by
+  rw [evalMod_truncate, evalMod, (Int.emod_emod_of_dvd _ (pow_dvd_pow 2 hn)).symm]
 
 def mergeInto (acc h : BitHeap w) : BitHeap w :=
   h.columns.zipIdx.foldl (fun acc' (col, idx) =>
