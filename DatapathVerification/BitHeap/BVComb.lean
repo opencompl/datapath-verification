@@ -67,7 +67,7 @@ def toCircuitVector (c : ArithCircuit w) : CircuitVector :=
 
 theorem toBitEnv_apply (bv : BitVecEnv w) (i k : Nat) (hk : k < w) :
     bv.toBitEnv (i * w + k) = (bv i).getLsbD k := by
-  simp [BitVecEnv.toBitEnv]
+  simp only [BitVecEnv.toBitEnv, Nat.mul_add_mod_self_right]
   have h1 : (i * w + k) / w = i := by
     have hw : 0 < w := by grind
     rw [Nat.mul_comm, Nat.mul_add_div hw, Nat.add_eq_left, Nat.div_eq_of_lt hk]
@@ -108,7 +108,8 @@ theorem foldl_addBit_evalMod  (idx : Nat) (h : BitHeap w) (cs : List Circuit) :
     = (h.evalMod env + (cs.map (fun c => 2^idx * (c.eval env).toInt)).sum) % 2^w := by
     induction cs generalizing h with
     | nil =>
-      simp [evalMod]
+      simp only [evalMod, List.foldl_nil, List.map_nil, List.sum_nil, add_zero, dvd_refl,
+        Int.emod_emod_of_dvd]
     | cons c tl ih =>
       simp only [List.foldl_cons, List.map_cons, List.sum_cons, ih, BitHeap.evalMod_heap_addBit, Int.emod_add_emod]
       grind
@@ -121,7 +122,8 @@ theorem foldl_columns_evalMod (acc : BitHeap w) (ps : List (Column × Nat)) :
               (p.1.elems.toList.map (fun c => 2^p.2 * (c.eval env).toInt)).sum)).sum) % 2^w := by
     induction ps generalizing acc with
     | nil =>
-      simp [evalMod]
+      simp only [evalMod, List.foldl_nil, List.map_nil, List.sum_nil, add_zero, dvd_refl,
+        Int.emod_emod_of_dvd]
     | cons p tl ih =>
       simp only [List.foldl_cons, List.map_cons, List.sum_cons, ih, foldl_addBit_evalMod, Int.emod_add_emod]
       grind
@@ -130,7 +132,7 @@ theorem eval_eq_sum_columns (h : BitHeap w) (env : Circuit.BitEnv) :
     ((h.eval env : Int))
       = (h.columns.toList.zipIdx.map (fun p =>
           (p.1.elems.toList.map (fun c => 2^p.2 * (c.eval env).toInt)).sum)).sum := by
-  simp [eval]
+  simp only [eval]
   have h0 := hornersMethod_eq_sum_zipIdx env h.columns.toList 0
   simp only [pow_zero, one_mul] at h0
   exact h0
@@ -151,7 +153,8 @@ theorem foldl_mergeInto_evalMod (hs : List (BitHeap w)) (acc : BitHeap w) :
       simp only [evalMod, List.foldl_nil, List.map_nil, List.sum_nil, add_zero, dvd_refl,
         Int.emod_emod_of_dvd]
     | cons h tl ih =>
-      simp [List.foldl_cons, List.map_cons, List.sum_cons, ih, mergeInto_evalMod]
+      simp only [List.foldl_cons, ih, mergeInto_evalMod, Int.emod_add_emod, List.map_cons,
+        List.sum_cons]
       grind
 
 theorem foldl_add_init {w : ℕ} (acc hd : BitVec w) (tl : List (BitVec w)) :
@@ -171,7 +174,8 @@ theorem foldl_add_toNat_go (acc : BitVec w) (l : List (BitVec w)) :
     norm_cast
     simp only [BitVec.toNat_mod_cancel]
   | cons hd tl ih =>
-    simp [List.foldl_cons, List.map_cons, List.sum_cons, foldl_add_init, BitVec.toNat_add, ih]
+    simp only [List.foldl_cons, foldl_add_init, BitVec.toNat_add, Int.natCast_emod, Nat.cast_add,
+      ih, Nat.cast_pow, Nat.cast_ofNat, Int.emod_add_emod, List.map_cons, List.sum_cons]
     grind
 
 theorem foldl_andBit_evalMod (env : Circuit.BitEnv) (idx : Nat) (c1 : Circuit)
@@ -212,7 +216,8 @@ theorem foldl_mulColumns_evalMod (env : Circuit.BitEnv) (col0 : Column) (i0 : Na
           * (qs.map (fun q => 2^(i0 + q.2) * (q.1.eval env : Int))).sum) % 2^v := by
   induction qs generalizing acc with
   | nil =>
-    simp [evalMod]
+    simp only [evalMod, List.foldl_nil, List.map_nil, List.sum_nil, mul_zero, add_zero, dvd_refl,
+      Int.emod_emod_of_dvd]
   | cons q tl ih =>
     simp only [List.foldl_cons, List.map_cons, List.sum_cons, ih, mulColumns_evalMod,
       Int.emod_add_emod]
@@ -232,7 +237,7 @@ theorem mulRow_evalMod (env : Circuit.BitEnv) (col0 : Column) (i0 : Nat)
       = 2^i0 * (col0.eval env : Int) * (h1.eval env : Int) := by
     have hz := BitHeap.hornersMethod_mul_eq_sum_zipIdx env h1.columns.toList i0 0
     have heval : (h1.eval env : Int) = HornersMethod env h1.columns.toList := by
-      simp [eval]
+      simp only [eval]
     rw [heval, ← hz]
     simp only [Nat.add_zero]
     grind
@@ -249,23 +254,23 @@ theorem foldl_mulRow_evalMod (env : Circuit.BitEnv) (h1 : BitHeap w)
               * (h1.eval env : Int)) % 2^v := by
   induction ps generalizing acc with
   | nil =>
-    simp [evalMod]
+    simp only [evalMod, List.foldl_nil, List.map_nil, List.sum_nil, zero_mul, add_zero, dvd_refl,
+      Int.emod_emod_of_dvd]
   | cons p tl ih =>
-    simp [ih, mulRow_evalMod]
+    simp only [List.foldl_cons, ih, mulRow_evalMod, Int.emod_add_emod, List.map_cons, List.sum_cons]
     grind
 
 theorem mulBitHeap_evalMod (h0 h1 : BitHeap w) (env : Circuit.BitEnv) :
     (h0.mulBitHeap h1).evalMod env
       = ((h0.eval env : Int) * (h1.eval env : Int)) % 2^(2*w - 1) := by
-  simp [mulBitHeap]
+  simp only [mulBitHeap]
   rw [←Vector.foldl_toList, foldl_mulRow_evalMod]
   congr 1
   simp only [empty_evalMod, Vector.toList_zipIdx, zero_add, mul_eq_mul_right_iff,
     Int.natCast_eq_zero, eval]
   left
   have h0 := hornersMethod_eq_sum_zipIdx env h0.columns.toList 0
-  simp_all only [pow_zero, one_mul]
-  simp only [Column.eval_eq_sum, List.sum_map_mul_left]
+  simp_all [pow_zero, one_mul, Column.eval_eq_sum, List.sum_map_mul_left]
 
 theorem toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w) :
     c.toBitHeap.evalMod bv.toBitEnv = ((c.denote bv).toNat : Int):= by
@@ -275,11 +280,12 @@ theorem toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w) :
     norm_cast
     rw [BitVec.toNat_mod_cancel]
   | case2 args ih =>
-    simp [denote, BitHeap.addBitHeap, foldl_mergeInto_evalMod, foldl_add_toNat_go]
+    simp only [addBitHeap, foldl_mergeInto_evalMod, empty_evalMod, List.map_map, zero_add, denote,
+      BitVec.ofNat_eq_ofNat, foldl_add_toNat_go, BitVec.toNat_ofNat, Nat.zero_mod, Nat.cast_zero]
     congr 2
-    simp
-    assumption
-  | case3 l r ih1 ih2=>
+    simp only [List.map_inj_left, Function.comp_apply]
+    exact ih
+  | case3 l r ih1 ih2 =>
     simp only [denote]
     simp only [BitHeap.evalMod] at ih1 ih2
     have hdvd : ((2:Int)^w) ∣ ((2:Int)^(2*w - 1)) := pow_dvd_pow 2 (by omega)
