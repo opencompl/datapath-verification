@@ -55,13 +55,12 @@ theorem hornersMethod_eq_sum_zipIdx (env : Circuit.BitEnv) (l : List Column) (s 
   | nil =>
     simp [HornersMethod]
   | cons p ps ih =>
-    simp [HornersMethod, List.zipIdx_cons, List.map_cons, List.sum_cons]
-    rw [← ih]
-    rw [Int.mul_add]
+    simp [HornersMethod, List.zipIdx_cons, List.map_cons, List.sum_cons, ← ih, Int.mul_add]
     have : 2 ^ s * (2 * ↑(HornersMethod env ps)) = 2 ^ (s + 1) * (HornersMethod env ps) := by
       grind
     norm_cast
-    simp [this, Column.eval_eq_sum]
+    simp only [this, Nat.cast_add, Nat.cast_mul, Nat.cast_pow, Nat.cast_ofNat, eval_eq_sum,
+      add_left_inj]
     induction p.elems.toList with
     | nil =>
       simp

@@ -75,6 +75,8 @@ def compressed (c : ArithCircuit w) : BitHeap w := (DaddaTree.DaddaTree c.toBitH
 
 def addThree : ArithCircuit 4 := .add [.var 0, .var 1, .var 2]
 
+def mulTwo : ArithCircuit 4 := .mul (.var 0) (.var 1)
+
 /-- info: "{0 ↦ [b4, b8, b0], 1 ↦ [b1, b5, b9], 2 ↦ [b2, b10, b6], 3 ↦ [b3, b11, b7]}" -/
 #guard_msgs in
 #eval toString addThree.toBitHeap
@@ -82,10 +84,20 @@ def addThree : ArithCircuit 4 := .add [.var 0, .var 1, .var 2]
 /-- info: "{0 ↦ [(b4 ⊕ b8), b0], 1 ↦ [(b4 ∧ b8), ((b1 ⊕ b5) ⊕ b9)], 2 ↦ [(((b1 ∧ b5) ∨ (b1 ∧ b9)) ∨ (b5 ∧ b9)), ((b2 ⊕ b10) ⊕ b6)], 3 ↦ [(((b2 ∧ b10) ∨ (b2 ∧ b6)) ∨ (b10 ∧ b6)), ((b3 ⊕ b11) ⊕ b7)]}" -/
 #guard_msgs in
 #eval toString (compressed addThree)
+/-- info: "{0 ↦ [(b0 ∧ b4)], 1 ↦ [(b0 ∧ b5), (b1 ∧ b4)], 2 ↦ [((b1 ∧ b5) ⊕ (b2 ∧ b4)), (b0 ∧ b6)], 3 ↦ [((((b3 ∧ b4) ⊕ (b0 ∧ b7)) ⊕ (b2 ∧ b5)) ⊕ (b1 ∧ b6)), ((b1 ∧ b5) ∧ (b2 ∧ b4))]}"-/
+#guard_msgs in
+#eval toString (compressed mulTwo)
 
 /-- info: "[HA(0: b4, b8), FA(1: b1, b5, b9), FA(2: b2, b10, b6), FA(3: b3, b11, b7)]" -/
 #guard_msgs in
 #eval toString (DaddaTree.DaddaTree addThree.toBitHeap).2
+
+/-- info: "[HA(3: (b3 ∧ b4), (b0 ∧ b7)), HA(2: (b1 ∧ b5), (b2 ∧ b4)), FA(3: ((b3 ∧ b4) ⊕ (b0 ∧ b7)), (b2 ∧ b5), (b1 ∧ b6))]" -/
+#guard_msgs in
+#eval toString (DaddaTree.DaddaTree mulTwo.toBitHeap).2
+
+def fma : ArithCircuit 4 := .add [mulTwo, .var 2]
+
 
 /-- info: 13 -/
 #guard_msgs in

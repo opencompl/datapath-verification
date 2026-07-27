@@ -12,12 +12,6 @@ inductive ArithBinopKind
 | add
 | mul
 
--- inductive ArithUnopKind
--- | neg
-
--- inductive BooleanBinopKind
--- | and | or | xor
-
 inductive ArithCircuit : Nat → Type
   | var (varIndex : Nat) : ArithCircuit w
   | add (args : List (ArithCircuit w)) : ArithCircuit w
@@ -139,8 +133,7 @@ theorem eval_eq_sum_columns (h : BitHeap w) (env : Circuit.BitEnv) :
 
 theorem mergeInto_evalMod(acc h : BitHeap w) :
     (mergeInto acc h).evalMod env = (acc.evalMod env + h.evalMod env) % 2^w := by
-  simp [mergeInto]
-  rw [Vector.foldl, ←Array.foldl_toList, foldl_columns_evalMod]
+  simp only [mergeInto, Vector.foldl, ←Array.foldl_toList, foldl_columns_evalMod]
   simp only [evalMod, Vector.toArray_zipIdx, Array.toList_zipIdx, Int.emod_add_emod,
     Int.add_emod_emod,eval_eq_sum_columns, eval_eq_sum_columns]
   grind
@@ -197,8 +190,7 @@ theorem mulColumns_evalMod (env : Circuit.BitEnv) (acc : BitHeap v)
     (mulColumns acc col0 col1 idx).evalMod env
       = (acc.evalMod env
           + 2^idx * (col0.eval env : Int) * (col1.eval env : Int)) % 2^v := by
-  simp only [mulColumns]
-  rw [Column.eval_eq_sum col0, Column.eval_eq_sum col1]
+  simp only [mulColumns, Column.eval_eq_sum col0, Column.eval_eq_sum col1]
   generalize col0.elems.toList = l0
   induction l0 generalizing acc with
   | nil =>
@@ -229,8 +221,7 @@ theorem mulRow_evalMod (env : Circuit.BitEnv) (col0 : Column) (i0 : Nat)
         (fun acc' q => mulColumns acc' col0 q.1 (i0 + q.2)) acc).evalMod env
       = (acc.evalMod env
           + 2^i0 * (col0.eval env : Int) * (h1.eval env : Int)) % 2^v := by
-  rw [Vector.foldl, ← Array.foldl_toList, foldl_mulColumns_evalMod]
-  simp only [Vector.toArray_zipIdx, Array.toList_zipIdx]
+  rw [Vector.foldl, ← Array.foldl_toList, foldl_mulColumns_evalMod, Vector.toArray_zipIdx, Array.toList_zipIdx]
   have hsum : (col0.eval env : Int)
         * ((h1.columns.toList.zipIdx.map
             (fun q => 2^(i0 + q.2) * (q.1.eval env : Int))).sum)
@@ -238,8 +229,7 @@ theorem mulRow_evalMod (env : Circuit.BitEnv) (col0 : Column) (i0 : Nat)
     have hz := BitHeap.hornersMethod_mul_eq_sum_zipIdx env h1.columns.toList i0 0
     have heval : (h1.eval env : Int) = HornersMethod env h1.columns.toList := by
       simp only [eval]
-    rw [heval, ← hz]
-    simp only [Nat.add_zero]
+    rw [heval, ← hz, Nat.add_zero]
     grind
   simp only [Vector.toList] at hsum ⊢
   rw [hsum]
@@ -273,7 +263,7 @@ theorem mulBitHeap_evalMod (h0 h1 : BitHeap w) (env : Circuit.BitEnv) :
   simp_all [pow_zero, one_mul, Column.eval_eq_sum, List.sum_map_mul_left]
 
 theorem toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w) :
-    c.toBitHeap.evalMod bv.toBitEnv = ((c.denote bv).toNat : Int):= by
+    c.toBitHeap.evalMod bv.toBitEnv = ((c.denote bv).toNat : Int) := by
   fun_induction toBitHeap with
   | case1 varIndex =>
     simp only [bitheapOfVar, bitheapOfVar_go varIndex bv w (le_refl w), denote]
