@@ -36,7 +36,7 @@ def numVars (c : Circuit) : Nat :=
   | .const _ => 0
 
 /-- An environment assigns a value to each bit, where bits are given by natural number indexes. -/
-def BitEnv := Nat → Bool
+abbrev BitEnv := Nat → Bool
 
 /-- Evaluate a circuit under a given environment. -/
 def eval (c : Circuit) (env : BitEnv) : Bool :=
@@ -75,5 +75,17 @@ theorem eval_atLeastTwo (a b c : Circuit) (env : BitEnv) :
   simp [eval, atLeastTwo]
 
 end Circuit
+
+
+/-- A vector of circuits, used to represent symbolic BitVectors. -/
+def CircuitVector := Array Circuit
+
+namespace CircuitVector
+
+def eval (vec : CircuitVector) (env : Circuit.BitEnv) : Int :=
+  (vec.mapIdx (fun i c => 2^i * (if c.eval env then 1 else 0))).sum
+
+end CircuitVector
+
 
 end BitHeap

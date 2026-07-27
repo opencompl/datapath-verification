@@ -44,6 +44,9 @@ def erase (col : Column) (c : Circuit) : Column :=
 def height (col : Column) : Nat :=
   col.elems.size
 
+theorem toInt_and_eq_mul (a b : Bool) : (a && b).toInt = a.toInt * b.toInt := by
+  cases a <;> cases b <;> rfl
+
 @[simp]
 theorem height_eq_size (col : Column) : col.height = col.elems.size := rfl
 
@@ -66,6 +69,19 @@ theorem foldl_sum (l : List Circuit) (env : BitEnv) (a : Nat) :
   | nil => simp
   | cons p ps ih =>
     grind
+
+theorem eval_eq_sum (col : Column) (env : Circuit.BitEnv) :
+    ((col.eval env : Int)) = (col.elems.toList.map (fun c => (c.eval env).toInt)).sum := by
+  simp [eval]
+  rw [Std.HashSet.fold_eq_foldl_toList, foldl_sum, Nat.zero_add]
+  have hpt : ∀ b : Bool, ((b.toNat : Int)) = b.toInt := by
+    intro b; cases b <;> rfl
+  induction col.elems.toList with
+  | nil => simp
+  | cons p ps ih =>
+    simp only [List.map_cons, List.sum_cons]
+    push_cast
+    rw [ih, hpt]
 
 @[simp]
 theorem eval_erase (col : Column) (c : Circuit) (env : BitEnv) (h : c ∈ col) :

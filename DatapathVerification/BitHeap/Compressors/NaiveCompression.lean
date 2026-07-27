@@ -13,10 +13,10 @@ Another difference with the Wallace tree is that this naive approach consumes ca
 -- if height >= 4, apply FA. if height = 3, apply HA.
 def reduceColumnStep (col : Nat) (h : BitHeap w) : Option (BitHeap w × Adder) :=
     match (h.get col).toList with
-  | a :: b :: c :: _ :: _ =>
+  | a :: b :: c :: _ =>
       let FA := Adder.fullAdder col a b c
       some (Chain.applyAdder FA h, FA)
-  | a :: b :: _ :: [] =>
+  | a :: b :: [] =>
       let HA := Adder.halfAdder col a b
       some (Chain.applyAdder HA h, HA)
   | _ => none
