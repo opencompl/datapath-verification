@@ -5,6 +5,10 @@ defaultTargets = ["DatapathVerification"]
 [[lean_lib]]
 name = "DatapathVerification"
 
+[[lean_exe]]
+name = "datapath-cli"
+root = "Main"
+
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
