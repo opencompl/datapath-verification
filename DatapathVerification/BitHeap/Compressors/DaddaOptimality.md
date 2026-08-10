@@ -262,3 +262,153 @@ Both hypotheses of the theorem are necessary, and the development proves it:
   general target pairs) before formalization. The earlier level-budgeted
   results (a verified bounded-model-checking pass for fixed k) were strictly
   subsumed by the level-free argument and removed.
+
+## 7. A step-by-step walkthrough
+
+This section retells the proof in plain language, in the order the Lean file
+builds it. It says the same things as §3 and §4, but slowly, and it assumes
+you have not memorized the notation.
+
+The overall shape is a sandwich. We define a simple number, the *greedy
+cost*, that depends only on the starting heap. Steps 1 through 4 show that no
+schedule whatsoever can cost less than this number. Steps 5 through 9 show
+that Dadda's schedule costs exactly this number on a multiplier heap. Step 10
+puts the two together, and optimality falls out.
+
+### Steps 1–4: nobody can beat the greedy cost
+
+**Step 1. Follow the bits through one level.** Pick a single column and a
+single level of the tree. Some bits are sitting in that column when the level
+begins. The adders placed there eat some of those bits and hand back a sum
+bit each, so on balance a full adder removes two bits from the column and a
+half adder removes one. Meanwhile the column below has been running its own
+adders, and each of them — full or half — throws exactly one carry bit
+upward into our column.
+
+Bits do not appear or vanish for any other reason, so the books have to
+balance: what the column is left holding, plus what it destroyed, equals what
+it was holding to begin with, plus the carries it received. This is proved as
+`stage_balance`. The bookkeeping is done in the natural numbers, where
+subtraction truncates at zero, so the identity could in principle be spoiled
+by a column trying to consume more bits than it has — but the legality
+condition forbids exactly that, which is why the equation is exact rather
+than an inequality.
+
+**Step 2. Add up all the levels.** Now stop looking at one level and add the
+step-1 equation over the entire schedule. The intermediate heights telescope
+away: the height a column ends one level at is the height it starts the next
+level at, so all of them cancel except the first and the last. What remains
+mentions only the heap we started from, the heap we finished with, and the
+*grand totals* of adders placed in each column over the whole run.
+
+This is the crucial move, proved as `run_balance`. The statement that comes
+out no longer mentions levels at all. It does not care whether the schedule
+took three levels or three hundred, or in what order it did anything. From
+here on, a schedule is just a table of column totals.
+
+**Step 3. Write down what those totals must satisfy.** Reading off step 2,
+together with the requirement that the schedule actually finishes (every
+column ends at height two or less) and the rule that nothing may be placed in
+the top column, we get four simple facts relating each column's total spend
+to the carries flowing between neighbors. A column cannot spend more than the
+bits available to it; it must spend enough to get down to two; and the
+carries it sends up are at least half its spend and at most all of it.
+
+We package those four facts as a `TallyChain`, and `chain_from` proves that
+every legal, finishing schedule gives rise to one. A separate accounting
+lemma, `tallyList_sum`, checks that adding up a chain's per-column spends
+reproduces the schedule's cost exactly — the chain has not thrown away the
+quantity we care about, it has only forgotten the timing.
+
+**Step 4. The cheapest chain is the obvious one.** Given the constraints of
+step 3, what is the least a chain can cost? The natural guess is to be as
+stingy as possible at every column, starting from the least significant and
+working upward: spend only what you must to reach height two, and forward
+only the minimum number of carries that the spend forces. That greedy walk is
+`greedyCost`. It has to run in that direction, because carries travel from a
+column to its more significant neighbor, so a column can only be settled once
+everything feeding it has been.
+
+Greedy is genuinely optimal, and the reason is a small piece of luck. Suppose
+greedy arrives at some column carrying fewer bits in than a rival chain does.
+Then greedy has less to clean up, so it pays less at that column — and
+because it paid less, it also sends fewer carries onward. Its advantage is
+not spent, it is preserved into the next column. So a single induction along
+the columns, carrying the invariant *greedy's carry is never larger than the
+rival's*, compares the two costs term by term. This is
+`greedyCost_le_chain`, and combined with step 3 it gives `cost_lower_bound`:
+**every** schedule that reduces a heap costs at least that heap's greedy
+cost.
+
+Half the sandwich is now done, and note how little was assumed. The rival
+schedule may use any number of levels and any arrangement of adders. It never
+had to be reasonable.
+
+### Steps 5–9: Dadda hits the greedy cost exactly
+
+The other half is a computation. We need Dadda's actual cost on a multiplier
+heap, in closed form, and it must come out equal to the greedy number.
+
+**Step 5. Notice the shape Dadda leaves behind.** Run Dadda by hand on a
+multiplier heap and the intermediate heaps are always the same kind of
+figure: heights climbing 1, 2, 3, … up to the current target, then a flat
+plateau at the target, then a short descent to 1 at the top end. We call it a
+trapezoid and define its height profile as `trapH`. This is the invariant the
+rest of the computation hangs on.
+
+**Step 6. Work out where the carries go.** To push the invariant through one
+level we need to know, for every column, how many carries arrive from below.
+On a trapezoid this turns out to have a clean description: near the bottom
+the carry count climbs by one per column, then it flattens out at a value
+determined by the profile height, then it falls off again as the heap tapers
+toward the top. One formula built from two `min`s captures all three regions
+at once, and it stays correct in the padding columns above the heap, where it
+simply evaluates to zero.
+
+This is `carry_trap` (and `carry_pp` for the original heap). Each is proved
+by induction on the column index; every individual step is arithmetic that
+`omega` settles on its own, including the halving, the `min`s, and the
+truncated subtraction.
+
+**Step 7. Check the invariant survives a level.** With the carry formula in
+hand, apply one Dadda level to a trapezoid and compute the resulting heights
+region by region. The answer is the next trapezoid down — `stage_apply_trap`
+— and applying the very first level to the multiplier heap produces the first
+trapezoid, `stage_apply_pp`. There is one side condition: the arithmetic is
+only exact if the carries never overrun the target, which holds because
+consecutive Dadda targets satisfy `⌊3t/2⌋ ≤ 2t`.
+
+**Step 8. Add up Dadda's cost the other way round.** Dadda is defined level
+by level, so the obvious way to total its cost is level by level too. Doing
+it column by column is much better. Within one column, what a level spends is
+just its height before, plus its carry-in, minus its height after. Sum that
+over all levels and the heights cancel in pairs exactly as they did in step
+2, leaving only the initial height, the final height, and the sum of all the
+carry-ins — and step 6 already told us every one of those carry-ins.
+
+Summing the carry formula over the target ladder is where a pleasant surprise
+appears. The individual pieces tile an interval, and the tiling identity holds
+for *any* increasing sequence of targets. Dadda's particular ladder, with its
+floor function `⌊3t/2⌋`, never has to be analyzed at all — only the fact that
+it increases. This is `go_tally`, lifted to the real heap by
+`dadda_tally_pp`.
+
+**Step 9. Compare with greedy.** Now evaluate the greedy walk of step 4 on
+the multiplier heap. Greedy is nothing more exotic than a Dadda level whose
+target happens to be two, so the very same carry formula from step 6 applies
+to it, and `greedy_eq_sum` turns the fold into a sum of per-column payments.
+Set the two closed forms side by side and they agree column by column. Adding
+over the columns gives `dadda_le_greedy_pp`: Dadda's cost on a k×k heap is
+its greedy cost.
+
+### Step 10: put the halves together
+
+For any schedule `S` that reduces the k×k partial-product heap, step 9 says
+Dadda's cost equals the greedy cost, and step 4 says the greedy cost is at
+most `S`'s cost. Chaining them gives `dadda.cost ≤ S.cost`, which is
+`dadda_cost_optimal_pp_anyWidth`.
+
+Small multipliers need a word of their own. When k is 2 or less the heap is
+already two rows tall, Dadda's schedule is the empty list, and its cost is
+zero, which nothing can beat. That case is argued directly rather than by
+asking Lean to evaluate anything, so the whole chain stays kernel-checkable.
