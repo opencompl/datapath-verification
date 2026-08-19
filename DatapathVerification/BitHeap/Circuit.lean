@@ -4,10 +4,15 @@ inductive Binop
 | xor | or | and | nand
 deriving Repr, DecidableEq, Inhabited, Hashable
 
+inductive UnaryOp
+| neg
+deriving Repr, DecidableEq, Inhabited, Hashable
+
 /-- A circuit that describes a logical operation.-/
 inductive Circuit
 | bit (varIndex : Nat)
 | binop (op : Binop) (a b : Circuit)
+| unaryop (op : UnaryOp) (a : Circuit)
 | const (val : Bool)
 deriving DecidableEq, Inhabited, Hashable
 
@@ -18,11 +23,16 @@ instance : ToString Binop where
     | .or  => "∨"
     | .nand => "&"
 
+instance : ToString UnaryOp where
+  toString
+    | .neg => "¬"
+
 partial def Circuit.toStr : Circuit → String
   | .bit n          => s!"b{n}"
   | .const true     => "1"
   | .const false    => "0"
   | .binop op a b   => s!"({a.toStr} {toString op} {b.toStr})"
+  | .unaryop op a   => s!"{toString op}{a.toStr}"
 
 instance : ToString Circuit := ⟨Circuit.toStr⟩
 
@@ -33,6 +43,7 @@ def numVars (c : Circuit) : Nat :=
   match c with
   | .bit varIndex => varIndex + 1
   | .binop _ a b => max a.numVars b.numVars
+  | .unaryop _ a => a.numVars
   | .const _ => 0
 
 /-- An environment assigns a value to each bit, where bits are given by natural number indexes. -/
@@ -50,6 +61,10 @@ def eval (c : Circuit) (env : BitEnv) : Bool :=
     | .or => aval || bval
     | .and => aval && bval
     | .nand => !(aval && bval)
+  | .unaryop op a =>
+    let aval := a.eval env
+    match op with
+    | .neg => !aval
   | .const val => val
 
 def atLeastTwo (a b c : Circuit) : Circuit :=
@@ -67,6 +82,11 @@ theorem eval_and (a b : Circuit) (env : BitEnv) :
 @[simp]
 theorem eval_xor (a b : Circuit) (env : BitEnv) :
     (binop .xor a b).eval env = ((a.eval env) != (b.eval env)) := by
+  simp [eval]
+
+@[simp]
+theorem eval_neg (a : Circuit) (env : BitEnv) :
+    (unaryop .neg a).eval env = !(a.eval env) := by
   simp [eval]
 
 @[simp]
