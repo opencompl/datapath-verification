@@ -1,4 +1,5 @@
 import DatapathVerification.BitHeap.BitHeap
+import DatapathVerification.BitHeap.BVComb
 import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
 import DatapathVerification.BitHeap.Circuit
