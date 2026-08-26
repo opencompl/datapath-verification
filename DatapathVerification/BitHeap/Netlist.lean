@@ -55,6 +55,15 @@ partial def emitCircuit (c : Circuit) : StateM EmitState String := do
            { s with
               nextId := s.nextId + 1
               lines := s.lines.push s!"gate g{s.nextId} {opName op} {ra} {rb}" })
+    | .unaryop .neg a => do
+        -- The protocol has no unary gate; `nand x x` is the inverter.
+        -- Unreachable from add/mul/zext, which never build a `neg`.
+        let ra ← emitCircuit a
+        modifyGet fun s =>
+          (s!"g{s.nextId}",
+           { s with
+              nextId := s.nextId + 1
+              lines := s.lines.push s!"gate g{s.nextId} nand {ra} {ra}" })
   modify fun s => { s with cache := s.cache.insert c ref }
   return ref
 
@@ -117,8 +126,13 @@ Verified compression of a `w`-bit multiply of two operands with live widths
 def compressMul (w wa wb : Nat) : Except String (Array String) := do
   if w == 0 then
     throw "width must be positive"
-  compressArith s!"ok mul {w} {min wa w} {min wb w}"
-    (w := w) (.mul (.var 0 wa) (.var 1 wb))
+  let wa := min wa w
+  let wb := min wb w
+  if hab : wa ≤ w ∧ wb ≤ w then
+    compressArith s!"ok mul {w} {wa} {wb}"
+      (w := w) (.mul (.zext 0 wa hab.1) (.zext 1 wb hab.2))
+  else
+    throw "operand live width exceeds result width"
 
 /--
 Verified compression of a `w`-bit addition of the operands whose live widths
@@ -131,9 +145,14 @@ def compressAdd (w : Nat) (widths : List Nat) : Except String (Array String) := 
   if widths.length < 2 then
     throw "addition needs at least 2 operands"
   let widths := widths.map (min · w)
+  -- `min · w` guarantees the bound, but it has to be re-derived for each operand
+  -- so `zext` can carry it.
+  let operands : List (Comb.ArithCircuit w) :=
+    widths.zipIdx.map fun (b, i) =>
+      if hb : b ≤ w then .zext i b hb else .var i
   compressArith
     (s!"ok add {w} {widths.length} " ++ " ".intercalate (widths.map toString))
-    (w := w) (.add (widths.zipIdx.map (fun (b, i) => .var i b)))
+    (w := w) (.add operands)
 
 end Netlist
 

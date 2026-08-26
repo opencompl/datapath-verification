@@ -22,7 +22,7 @@ namespace NetlistExamples
 
 open Comb
 
-def mul3 : ArithCircuit 3 := .mul (.var 0 3) (.var 1 3)
+def mul3 : ArithCircuit 3 := .mul (.var 0) (.var 1)
 
 -- Step 1: the raw partial-product heap. Column k holds all (a_i AND b_j)
 -- with i + j = k; columns ≥ 3 are truncated away (we compute mod 2^3).
@@ -138,7 +138,7 @@ info: "FAs: 15, HAs: 6"
 -/
 #guard_msgs in
 #eval Chain.printSummary
-  (DaddaTree.DaddaTree (ArithCircuit.mul (w := 8) (.var 0 8) (.var 1 8)).toBitHeap).2
+  (DaddaTree.DaddaTree (ArithCircuit.mul (w := 8) (.var 0) (.var 1)).toBitHeap).2
 
 end NetlistExamples
 
