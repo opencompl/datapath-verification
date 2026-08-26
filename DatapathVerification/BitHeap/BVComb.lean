@@ -13,11 +13,10 @@ inductive ArithBinopKind
 | mul
 
 inductive ArithCircuit : Nat → Type
-  | var (varIndex : Nat) (bits : Nat) : ArithCircuit w -- A w-bit operand with lowest `bits` as live bits. Operand is zero-extended from `bits` to `w`.
+  | var (varIndex : Nat) : ArithCircuit w
   | add (args : List (ArithCircuit w)) : ArithCircuit w
   | mul (l r : ArithCircuit w) : ArithCircuit w
-  -- | arithunop (kind : ArithUnopKind) (width : Nat) (arg : ArithCircuit)
-  -- | bvbinop (kind : BooleanBinopKind) (width : Nat) (l r : ArithCircuit)
+  | zext (varIndex : Nat) (b : Nat) (hbw : b ≤ w) : ArithCircuit w -- `b`-bit variable zero-extended to `w` bits.
 
 def BitVecEnv (w : Nat) := Nat → BitVec w
 
@@ -45,18 +44,20 @@ Only the lowest `bits` are added as variables. Remaning bits are 0's.
 -/
 def bitheapOfVar (varIndex : Nat) (bits : Nat) : BitHeap w :=
   -- | We need to know that this index is unique which is a gigantic pain.
-  List.range (min bits w)
+  List.range bits
     |>.foldl (fun bh i => bh.addBit i (BitHeap.Circuit.bit (varIndex * w + i))) (BitHeap.empty w)
 
 def toBitHeap : ArithCircuit w → BitHeap w
-  | .var varIndex bits => bitheapOfVar varIndex bits
+  | .var varIndex => bitheapOfVar varIndex w
   | .add args => BitHeap.addBitHeap (args.map toBitHeap)
   | .mul l r => BitHeap.truncate ((toBitHeap l).mulBitHeap (toBitHeap r)) w (by omega)
+  | .zext varIndex b _ => bitheapOfVar varIndex b
 
 def denote (ρ : BitVecEnv w) : ArithCircuit w → BitVec w
-  | .var i bits => ((ρ i).setWidth (min bits w)).setWidth w
+  | .var i => ρ i
   | .add args => (args.map (denote ρ)).foldl (· + ·) 0
   | .mul l r => denote ρ l * denote ρ r
+  | .zext i b _ => ((ρ i).setWidth b).setWidth w
 
 def toCircuitVector (c : ArithCircuit w) : CircuitVector :=
   let bh := c.toBitHeap
@@ -268,13 +269,11 @@ theorem mulBitHeap_evalMod (h0 h1 : BitHeap w) (env : Circuit.BitEnv) :
 theorem toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w) :
     c.toBitHeap.evalMod bv.toBitEnv = ((c.denote bv).toNat : Int) := by
   fun_induction toBitHeap with
-  | case1 varIndex bits =>
+  | case1 varIndex =>
     simp only [bitheapOfVar, denote,
-      bitheapOfVar_go varIndex bv (min bits w) (Nat.min_le_right bits w)]
-    have hlt : (bv varIndex).toNat % 2 ^ (min bits w) < 2 ^ w :=
-      Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos _))
-        (Nat.pow_le_pow_right (by omega) (Nat.min_le_right bits w))
-    simp [BitVec.toNat_setWidth, Nat.mod_eq_of_lt hlt]
+      bitheapOfVar_go varIndex bv w (le_refl w)]
+    norm_cast
+    rw [BitVec.toNat_mod_cancel]
   | case2 args ih =>
     simp only [addBitHeap, foldl_mergeInto_evalMod, empty_evalMod, List.map_map, zero_add, denote,
       BitVec.ofNat_eq_ofNat, foldl_add_toNat_go, BitVec.toNat_ofNat, Nat.zero_mod, Nat.cast_zero]
@@ -287,6 +286,12 @@ theorem toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w) :
     have hdvd : ((2:Int)^w) ∣ ((2:Int)^(2*w - 1)) := pow_dvd_pow 2 (by omega)
     rw [evalMod_truncateMod, BitVec.toNat_mul, mulBitHeap_evalMod, Int.emod_emod_of_dvd _ hdvd, Int.mul_emod, ih1, ih2]
     congr 1
+  | case4 varIndex b hbw =>
+    simp only [bitheapOfVar, denote, bitheapOfVar_go varIndex bv b hbw]
+    have hlt : (bv varIndex).toNat % 2 ^ b < 2 ^ w :=
+      Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos _))
+        (Nat.pow_le_pow_right (by omega) hbw)
+    simp [BitVec.toNat_setWidth, Nat.mod_eq_of_lt hlt]
 
 theorem compressed_toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w)
     (adders : List Chain.Adder) (h' : BitHeap w)
