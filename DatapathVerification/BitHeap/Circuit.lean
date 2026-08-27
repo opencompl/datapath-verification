@@ -70,6 +70,9 @@ def eval (c : Circuit) (env : BitEnv) : Bool :=
 def atLeastTwo (a b c : Circuit) : Circuit :=
   binop .or (binop .or (binop .and a b) (binop .and a c)) (binop .and b c)
 
+def majorityShared (a b c : Circuit) : Circuit :=
+  binop .or (binop .and a b) (binop .and (binop .xor a b) c)
+
 @[simp]
 theorem const_false_eval_eq :
   (const false).eval env = false := by simp [eval]
@@ -93,6 +96,16 @@ theorem eval_neg (a : Circuit) (env : BitEnv) :
 theorem eval_atLeastTwo (a b c : Circuit) (env : BitEnv) :
   (atLeastTwo a b c).eval env = ((a.eval env) && (b.eval env) || (a.eval env) && (c.eval env) || (b.eval env) && (c.eval env)) := by
   simp [eval, atLeastTwo]
+
+@[simp]
+theorem eval_majorityShared (a b c : Circuit) (env : BitEnv) :
+  (majorityShared a b c).eval env = ((a.eval env) && (b.eval env) || (a.eval env) && (c.eval env) || (b.eval env) && (c.eval env)) := by
+  simp [eval, majorityShared]
+  cases a.eval env <;> cases b.eval env <;> cases c.eval env <;> rfl
+
+theorem eval_majorityShared_eq_atLeastTwo (a b c : Circuit) (env : BitEnv) :
+    (majorityShared a b c).eval env = (atLeastTwo a b c).eval env := by
+  simp
 
 end Circuit
 

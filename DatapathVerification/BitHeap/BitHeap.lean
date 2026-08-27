@@ -235,7 +235,7 @@ def fullAdder (column : Nat) (i j k : Circuit) (h : BitHeap w) : AdderResult w :
   let h := h.removeBit column j
   let h := h.removeBit column k
   let sum := Circuit.binop .xor (Circuit.binop .xor i j) k
-  let carry := Circuit.atLeastTwo i j k
+  let carry := Circuit.majorityShared i j k
   let h := h.addBit column sum
   let h := h.addBit (column + 1) carry
   ⟨h, sum, carry⟩
