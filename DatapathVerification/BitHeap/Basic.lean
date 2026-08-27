@@ -7,6 +7,7 @@ import DatapathVerification.BitHeap.Compressors.CompressionHelpers
 import DatapathVerification.BitHeap.Compressors.NaiveCompression
 import DatapathVerification.BitHeap.Compressors.DaddaTree
 import DatapathVerification.BitHeap.Compressors.WallaceTree
+import DatapathVerification.BitHeap.Examples.BVCombExamples
 import DatapathVerification.BitHeap.Examples.Examples
 import DatapathVerification.BitHeap.Examples.NaiveCompressionExamples
 import DatapathVerification.BitHeap.Examples.EvalModExamples
