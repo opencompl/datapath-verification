@@ -44,7 +44,6 @@ Only the lowest `bits` are added as variables. Remaning bits are 0's.
 -/
 def bitheapOfVar (varIndex : Nat) (bits : Nat) : BitHeap w :=
   -- | We need to know that this index is unique which is a gigantic pain.
-  -- Callers pass `bits ≤ w`; columns at or above `bits` stay empty (known-zero bits).
   List.range bits
     |>.foldl (fun bh i => bh.addBit i (BitHeap.Circuit.bit (varIndex * w + i))) (BitHeap.empty w)
 

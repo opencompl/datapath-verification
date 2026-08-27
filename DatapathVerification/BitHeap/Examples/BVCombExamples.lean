@@ -110,7 +110,7 @@ def fma : ArithCircuit 4 := .add [mulTwo, .var 2]
 --- Zero-extension Tests
 
 -- i3 -> i6 zero extension
-def mulZext : ArithCircuit 6 := .mul (.zext 0 3 (by omega)) (.zext 1 3 (by omega))
+def mulZext : ArithCircuit 6 := .mul (.zext 0 3) (.zext 1 3)
 
 /-- info: "{0 ↦ [(b0 ∧ b6)], 1 ↦ [(b0 ∧ b7), (b1 ∧ b6)], 2 ↦ [(b2 ∧ b6), (b1 ∧ b7), (b0 ∧ b8)], 3 ↦ [(b1 ∧ b8), (b2 ∧ b7)], 4 ↦ [(b2 ∧ b8)], 5 ↦ []}" -/
 #guard_msgs in
@@ -136,7 +136,7 @@ def testEnv3 : BitVecEnv 3 := fun i =>
   | 1 => 7#3
   | _ => 0#3
 
-def mulNoZext : ArithCircuit 3 := .mul (.zext 0 3 (by omega)) (.zext 1 3 (by omega))
+def mulNoZext : ArithCircuit 3 := .mul (.zext 0 3) (.zext 1 3)
 
 -- without extension we get the truncated result 3
 /-- info: 3 -/
