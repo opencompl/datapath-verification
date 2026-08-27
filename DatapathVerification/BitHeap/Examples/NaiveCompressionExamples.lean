@@ -112,7 +112,7 @@ info: 1
 #eval (NaiveCompression.naiveCompression multiColSmall).1.maxHeight
 
 /--
-info: [HA(0: b1, b0), FA(1: b2, b4, b3), FA(1: ((b2 ⊕ b4) ⊕ b3), b5, (b1 ∧ b0)), FA(2: (((b2 ∧ b4) ∨ (b2 ∧ b3)) ∨ (b4 ∧ b3)), b6, b7), HA(2: (((((b2 ⊕ b4) ⊕ b3) ∧ b5) ∨ (((b2 ⊕ b4) ⊕ b3) ∧ (b1 ∧ b0))) ∨ (b5 ∧ (b1 ∧ b0))), (((((b2 ∧ b4) ∨ (b2 ∧ b3)) ∨ (b4 ∧ b3)) ⊕ b6) ⊕ b7))]
+info: [HA(0: b1, b0), FA(1: b2, b4, b3), FA(1: ((b2 ⊕ b4) ⊕ b3), b5, (b1 ∧ b0)), FA(2: ((((b2 ⊕ b4) ⊕ b3) ∧ b5) ∨ ((((b2 ⊕ b4) ⊕ b3) ⊕ b5) ∧ (b1 ∧ b0))), b6, b7), HA(2: ((b2 ∧ b4) ∨ ((b2 ⊕ b4) ∧ b3)), ((((((b2 ⊕ b4) ⊕ b3) ∧ b5) ∨ ((((b2 ⊕ b4) ⊕ b3) ⊕ b5) ∧ (b1 ∧ b0))) ⊕ b6) ⊕ b7))]
 -/
 #guard_msgs in
 #eval (NaiveCompression.naiveCompression multiColSmall).2

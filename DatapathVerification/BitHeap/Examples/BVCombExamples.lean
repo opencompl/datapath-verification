@@ -81,7 +81,9 @@ def mulTwo : ArithCircuit 4 := .mul (.var 0) (.var 1)
 #guard_msgs in
 #eval toString addThree.toBitHeap
 
-/-- info: "{0 ↦ [(b4 ⊕ b8), b0], 1 ↦ [(b4 ∧ b8), ((b1 ⊕ b5) ⊕ b9)], 2 ↦ [(((b1 ∧ b5) ∨ (b1 ∧ b9)) ∨ (b5 ∧ b9)), ((b2 ⊕ b10) ⊕ b6)], 3 ↦ [(((b2 ∧ b10) ∨ (b2 ∧ b6)) ∨ (b10 ∧ b6)), ((b3 ⊕ b11) ⊕ b7)]}" -/
+/-- info:
+"{0 ↦ [(b4 ⊕ b8), b0], 1 ↦ [(b4 ∧ b8), ((b1 ⊕ b5) ⊕ b9)], 2 ↦ [((b1 ∧ b5) ∨ ((b1 ⊕ b5) ∧ b9)), ((b2 ⊕ b10) ⊕ b6)], 3 ↦ [((b3 ⊕ b11) ⊕ b7), ((b2 ∧ b10) ∨ ((b2 ⊕ b10) ∧ b6))]}"
+-/
 #guard_msgs in
 #eval toString (compressed addThree)
 /-- info: "{0 ↦ [(b0 ∧ b4)], 1 ↦ [(b0 ∧ b5), (b1 ∧ b4)], 2 ↦ [((b1 ∧ b5) ⊕ (b2 ∧ b4)), (b0 ∧ b6)], 3 ↦ [((((b3 ∧ b4) ⊕ (b0 ∧ b7)) ⊕ (b2 ∧ b5)) ⊕ (b1 ∧ b6)), ((b1 ∧ b5) ∧ (b2 ∧ b4))]}" -/
