@@ -17,6 +17,7 @@ inductive ArithCircuit : Nat → Type
   | add (args : List (ArithCircuit w)) : ArithCircuit w
   | mul (l r : ArithCircuit w) : ArithCircuit w
   | zext (varIndex : Nat) (b : Nat) (hbw : b ≤ w) : ArithCircuit w -- `b`-bit variable zero-extended to `w` bits.
+  | sext (varIndex : Nat) (b : Nat) (hbw : b ≤ w) (hb : 0 < b) : ArithCircuit w -- `b`-bit variable sign-extended to `w` bits.
 
 def BitVecEnv (w : Nat) := Nat → BitVec w
 
@@ -47,17 +48,33 @@ def bitheapOfVar (varIndex : Nat) (bits : Nat) : BitHeap w :=
   List.range bits
     |>.foldl (fun bh i => bh.addBit i (BitHeap.Circuit.bit (varIndex * w + i))) (BitHeap.empty w)
 
+/--
+Given a bitvector (x : BV 3) sign-extended to width `w`, build a bitheap
+```
+x2 x2 x2 ... x2 x1 x0
+```
+Columns `0` to `bits - 1` hold the live bits of the variable; every column from
+`bits` to `w - 1` holds a copy of the sign bit (column `bits - 1`), matching
+`BitVec.signExtend`.
+-/
+def bitheapOfVarSext (varIndex : Nat) (bits : Nat) : BitHeap w :=
+  let base := bitheapOfVar varIndex bits (w := w)
+  (List.range (w - bits)).foldl
+    (fun bh k => bh.addBit (bits + k) (BitHeap.Circuit.bit (varIndex * w + bits - 1))) base
+
 def toBitHeap : ArithCircuit w → BitHeap w
   | .var varIndex => bitheapOfVar varIndex w
   | .add args => BitHeap.addBitHeap (args.map toBitHeap)
   | .mul l r => BitHeap.truncate ((toBitHeap l).mulBitHeap (toBitHeap r)) w (by omega)
   | .zext varIndex b _ => bitheapOfVar varIndex b
+  | .sext varIndex b _ _ => bitheapOfVarSext varIndex b
 
 def denote (ρ : BitVecEnv w) : ArithCircuit w → BitVec w
   | .var i => ρ i
   | .add args => (args.map (denote ρ)).foldl (· + ·) 0
   | .mul l r => denote ρ l * denote ρ r
   | .zext i b _ => ((ρ i).setWidth b).setWidth w
+  | .sext i b _ _ => ((ρ i).setWidth b).signExtend w
 
 def toCircuitVector (c : ArithCircuit w) : CircuitVector :=
   let bh := c.toBitHeap
@@ -100,6 +117,80 @@ theorem bitheapOfVar_go (i : Nat) (bv : BitVecEnv w) (k : Nat) (hk : k ≤ w) :
     have hlt : (bv i).toNat % 2 ^ (m + 1) < 2 ^ w :=
       ((bv i).toNat.mod_lt (Nat.two_pow_pos _)).trans_le (Nat.pow_le_pow_right (by omega) (by omega))
     grind [natCast_emod_two_pow_of_lt hlt]
+
+/--
+`Nat`-valued closed form for the value contributed by the low `bits` live columns together
+with `k` sign-replicated columns above them: `(bv i).toNat % 2^bits`, plus (if the sign bit is
+set) another `2^(bits+k) - 2^bits` from the replicated sign bit occupying columns
+`bits, ..., bits+k-1`.
+-/
+def signFillNat (x : BitVec n) (bits k : Nat) : Nat :=
+  x.toNat % 2 ^ bits + if x.getLsbD (bits - 1) then 2 ^ (bits + k) - 2 ^ bits else 0
+
+theorem signFillNat_lt (x : BitVec n) (bits k w : Nat) (hbits : 0 < bits) (hk : bits + k ≤ w) :
+    signFillNat x bits k < 2 ^ w := by
+  simp only [signFillNat]
+  have h1 : x.toNat % 2 ^ bits < 2 ^ bits := Nat.mod_lt _ (Nat.two_pow_pos _)
+  have h2 : (2:Nat) ^ bits ≤ 2 ^ w := Nat.pow_le_pow_right (by omega) (by omega)
+  have h3 : (2:Nat) ^ (bits + k) ≤ 2 ^ w := Nat.pow_le_pow_right (by omega) hk
+  set a := x.toNat % 2 ^ bits
+  split <;> omega
+
+theorem signFillNat_succ (x : BitVec n) (bits k : Nat) (hbits : 0 < bits) :
+    signFillNat x bits (k + 1)
+      = signFillNat x bits k + 2 ^ (bits + k) * (x.getLsbD (bits - 1)).toNat := by
+  simp only [signFillNat]
+  have hge : (2:Nat) ^ bits ≤ 2 ^ (bits + k) := Nat.pow_le_pow_right (by omega) (by omega)
+  have hstep : (2:Nat) ^ (bits + (k + 1)) = 2 ^ (bits + k) + 2 ^ (bits + k) := by
+    rw [show bits + (k + 1) = (bits + k) + 1 by omega, pow_succ]; omega
+  set a := x.toNat % 2 ^ bits
+  cases x.getLsbD (bits - 1) <;> simp; omega
+
+/--
+Closed form for the sign-fill fold: the low `bits` columns hold `(bv i).toNat % 2^bits`
+as usual, and each of the `k` sign-replicated columns above it contributes another copy
+of the sign bit.
+-/
+theorem bitheapOfVarSext_go (i : Nat) (bv : BitVecEnv w) (bits k : Nat)
+    (hbits : 0 < bits) (hk : bits + k ≤ w) :
+    ((List.range k).foldl
+        (fun bh j => bh.addBit (bits + j) (.bit (i * w + bits - 1)))
+        (bitheapOfVar i bits (w := w))).evalMod bv.toBitEnv
+      = ((signFillNat (bv i) bits k : Nat) : Int) := by
+  have hsign : bv.toBitEnv (i * w + bits - 1) = (bv i).getLsbD (bits - 1) := by
+    have : i * w + bits - 1 = i * w + (bits - 1) := by omega
+    rw [this, toBitEnv_apply bv i (bits - 1) (by omega)]
+  induction k with
+  | zero =>
+    simp only [List.range_zero, List.foldl_nil, signFillNat, add_zero, Nat.sub_self]
+    simp only [ite_self]
+    show (bitheapOfVar i bits (w := w)).evalMod bv.toBitEnv = _
+    exact bitheapOfVar_go i bv bits (by omega)
+  | succ m ih =>
+    simp only [List.range_succ, List.foldl_append, List.foldl_cons, List.foldl_nil,
+      evalMod_heap_addBit, ih (by omega), Circuit.eval, hsign]
+    have hnat : signFillNat (bv i) bits m + 2 ^ (bits + m) * ((bv i).getLsbD (bits - 1)).toNat
+        = signFillNat (bv i) bits (m + 1) := (signFillNat_succ (bv i) bits m hbits).symm
+    have hlt := signFillNat_lt (bv i) bits (m + 1) w hbits hk
+    have hcast : ((bv i).getLsbD (bits - 1)).toInt = (((bv i).getLsbD (bits - 1)).toNat : Int) := by
+      cases (bv i).getLsbD (bits - 1) <;> simp
+    have hpow : (2 : Int) ^ (bits + m) = ((2 ^ (bits + m) : Nat) : Int) := by push_cast; rfl
+    rw [hcast, hpow, ← Nat.cast_mul, ← Nat.cast_add, hnat]
+    exact natCast_emod_two_pow_of_lt hlt
+
+/--
+`signFillNat` is exactly the `Nat` value of the sign-extension: the low `bits` bits of `x`
+kept as-is, plus `2^w - 2^bits` when the sign bit is set.
+-/
+theorem signFillNat_eq_signExtend_toNat {n : Nat} (x : BitVec n) (bits w : Nat)
+    (hbits : 0 < bits) (hbw : bits ≤ w) :
+    signFillNat x bits (w - bits) = (((x.setWidth bits).signExtend w).toNat) := by
+  have hlt : x.toNat % 2 ^ bits < 2 ^ w :=
+    Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos _))
+      (Nat.pow_le_pow_right (by omega) hbw)
+  have hw : bits + (w - bits) = w := by omega
+  simp only [signFillNat, hw, BitVec.toNat_signExtend, BitVec.toNat_setWidth,
+    BitVec.msb_setWidth, Nat.mod_eq_of_lt hlt, hbits, decide_true, Bool.true_and]
 
 theorem foldl_addBit_evalMod  (idx : Nat) (h : BitHeap w) (cs : List Circuit) :
   (List.foldl (fun a c => addBit idx c a) h cs).evalMod env
@@ -292,6 +383,10 @@ theorem toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w) :
       Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos _))
         (Nat.pow_le_pow_right (by omega) hbw)
     simp [BitVec.toNat_setWidth, Nat.mod_eq_of_lt hlt]
+  | case5 varIndex b hbw hb =>
+    simp only [bitheapOfVarSext, denote,
+      bitheapOfVarSext_go varIndex bv b (w - b) hb (by omega)]
+    rw [signFillNat_eq_signExtend_toNat (bv varIndex) b w hb hbw]
 
 theorem compressed_toBitHeap_correct (c : ArithCircuit w) (bv : BitVecEnv w)
     (adders : List Chain.Adder) (h' : BitHeap w)
