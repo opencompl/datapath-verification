@@ -119,39 +119,53 @@ def compressArith (header : String) (c : Comb.ArithCircuit w) :
       return #[header] ++ lines
 
 /--
-Verified compression of a `w`-bit multiply of two operands with live widths
-`wa` and `wb`: operand bits at positions ≥ the live width are constant 0
-(zero-extension) and never enter the bit heap.
+The operand model used by both entry points: an operand whose low `live` bits
+are the real ("live") bits of the operand, with the bits above them either
+constant `0` (`signed = false`, zero extension) or copies of bit `live - 1`
+(`signed = true`, sign extension).
 -/
-def compressMul (w wa wb : Nat) : Except String (Array String) := do
+def operandCircuit (w i live : Nat) (signed : Bool) : Comb.ArithCircuit w :=
+  let b := min live w
+  have hb : b ≤ w := Nat.min_le_right _ _
+  if hpos : 0 < b then
+    if signed then .sext i b hb hpos else .zext i b hb
+  else
+    .zext i b hb
+
+/-- Render an operand spec as its protocol token: `<live>` or `<live>s`. -/
+def specToken (live : Nat) (signed : Bool) : String :=
+  toString live ++ (if signed then "s" else "")
+
+/--
+Verified compression of a `w`-bit multiply of two operands with live widths
+`wa` and `wb`: operand bits at positions ≥ the live width are constant 0 when
+the operand is zero-extended (`sa`/`sb` false) and copies of the operand's
+sign bit when it is sign-extended (`sa`/`sb` true).
+-/
+def compressMul (w wa wb : Nat) (sa sb : Bool) : Except String (Array String) := do
   if w == 0 then
     throw "width must be positive"
   let wa := min wa w
   let wb := min wb w
-  if hab : wa ≤ w ∧ wb ≤ w then
-    compressArith s!"ok mul {w} {wa} {wb}"
-      (w := w) (.mul (.zext 0 wa hab.1) (.zext 1 wb hab.2))
-  else
-    throw "operand live width exceeds result width"
+  compressArith
+    s!"ok mul {w} {specToken wa sa} {specToken wb sb}"
+    (w := w) (.mul (operandCircuit w 0 wa sa) (operandCircuit w 1 wb sb))
 
 /--
-Verified compression of a `w`-bit addition of the operands whose live widths
-are given by `widths` (one entry per operand; bits above an operand's live
-width are constant 0).
+Verified compression of a `w`-bit addition of the operands described by
+`specs` (one `(live width, signed)` pair per operand; see `operandCircuit`).
 -/
-def compressAdd (w : Nat) (widths : List Nat) : Except String (Array String) := do
+def compressAdd (w : Nat) (specs : List (Nat × Bool)) : Except String (Array String) := do
   if w == 0 then
     throw "width must be positive"
-  if widths.length < 2 then
+  if specs.length < 2 then
     throw "addition needs at least 2 operands"
-  let widths := widths.map (min · w)
-  -- `min · w` guarantees the bound, but it has to be re-derived for each operand
-  -- so `zext` can carry it.
+  let specs := specs.map fun (live, signed) => (min live w, signed)
   let operands : List (Comb.ArithCircuit w) :=
-    widths.zipIdx.map fun (b, i) =>
-      if hb : b ≤ w then .zext i b hb else .var i
+    specs.zipIdx.map fun ((live, signed), i) => operandCircuit w i live signed
   compressArith
-    (s!"ok add {w} {widths.length} " ++ " ".intercalate (widths.map toString))
+    (s!"ok add {w} {specs.length} "
+      ++ " ".intercalate (specs.map fun (live, signed) => specToken live signed))
     (w := w) (.add operands)
 
 end Netlist
