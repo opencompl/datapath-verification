@@ -118,15 +118,29 @@ gate g3 and b3 b6
 gate g4 xor b2 b5
 gate g5 xor g4 b8
 gate g6 and b1 b4
-gate g7 and b1 b7
+gate g7 and g1 b7
 gate g8 or g6 g7
-gate g9 and b4 b7
-gate g10 or g8 g9
 row0 g0 g2 g5
-row1 b0 g3 g10
+row1 b0 g3 g8
 -/
 #guard_msgs in
-#eval match Netlist.compressAdd 3 [3, 3, 3] with
+#eval match Netlist.compressAdd 3 [(3, false), (3, false), (3, false)] with
+  | .ok lines => IO.println (String.intercalate "\n" lines.toList)
+  | .error e => IO.println s!"error: {e}"
+
+-- Sign-extension awareness: an operand spec marked `s` says the bits above the
+-- live width are copies of the sign bit rather than constant 0. Here operand 0
+-- is a 3-bit value sign-extended into a 4-bit addition, so column 3 holds
+-- another copy of its sign bit `b2` instead of a fourth independent bit. With
+-- only two operands the heap is already two rows high, so no compression is
+-- needed and the netlist is the bare heap.
+/--
+info: ok add 4 2 3s 4
+row0 b0 b1 b2 b2
+row1 b4 b5 b6 b7
+-/
+#guard_msgs in
+#eval match Netlist.compressAdd 4 [(3, true), (4, false)] with
   | .ok lines => IO.println (String.intercalate "\n" lines.toList)
   | .error e => IO.println s!"error: {e}"
 

@@ -142,7 +142,7 @@ Verified compression of a `w`-bit multiply of two operands with live widths
 the operand is zero-extended (`sa`/`sb` false) and copies of the operand's
 sign bit when it is sign-extended (`sa`/`sb` true).
 -/
-def compressMul (w wa wb : Nat) (sa sb : Bool) : Except String (Array String) := do
+def compressMul (w wa wb : Nat) (sa sb : Bool := false) : Except String (Array String) := do
   if w == 0 then
     throw "width must be positive"
   let wa := min wa w
