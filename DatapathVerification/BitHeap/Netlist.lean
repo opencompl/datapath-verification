@@ -154,6 +154,90 @@ def compressAdd (w : Nat) (widths : List Nat) : Except String (Array String) := 
     (s!"ok add {w} {widths.length} " ++ " ".intercalate (widths.map toString))
     (w := w) (.add operands)
 
+/--
+Parse a leaf token `<index>.<live>`: operand `index` (of `numOperands`) whose
+low `live` bits are its real bits and whose bits above them are constant `0`,
+so that the extension bits never enter the bit heap.
+-/
+private def parseLeaf (w numOperands : Nat) (s : String) :
+    Except String (Comb.ArithCircuit w) :=
+  match s.splitOn "." with
+  | [iStr, liveStr] =>
+    match iStr.toNat?, liveStr.toNat? with
+    | some i, some live =>
+      if i < numOperands then
+        let b := min live w
+        have hb : b ≤ w := Nat.min_le_right _ _
+        .ok (.zext i b hb)
+      else
+        .error s!"leaf '{s}' addresses operand {i} of {numOperands}"
+    | _, _ => .error s!"malformed leaf token '{s}'"
+  | _ => .error s!"malformed leaf token '{s}'"
+
+mutual
+
+/-- Parse one prefix-notation expression, returning it and the leftover tokens. -/
+private partial def parseExpr (w numOperands : Nat) :
+    List String → Except String (Comb.ArithCircuit w × List String)
+  | [] => .error "unexpected end of expression"
+  | tok :: rest =>
+    if tok == "mul" then do
+      let (l, rest₁) ← parseExpr w numOperands rest
+      let (r, rest₂) ← parseExpr w numOperands rest₁
+      return (.mul l r, rest₂)
+    else if tok.startsWith "add" then
+      match (tok.drop 3).toNat? with
+      | none => .error s!"malformed token '{tok}'"
+      | some n =>
+        if n < 2 then .error s!"'{tok}': addition needs at least 2 operands"
+        else do
+          let (args, rest') ← parseArgs w numOperands n rest
+          return (.add args, rest')
+    else do
+      let leaf ← parseLeaf w numOperands tok
+      return (leaf, rest)
+
+/-- Parse `n` consecutive prefix-notation expressions. -/
+private partial def parseArgs (w numOperands : Nat) :
+    Nat → List String → Except String (List (Comb.ArithCircuit w) × List String)
+  | 0, toks => .ok ([], toks)
+  | n + 1, toks => do
+    let (arg, toks₁) ← parseExpr w numOperands toks
+    let (args, toks₂) ← parseArgs w numOperands n toks₁
+    return (arg :: args, toks₂)
+
+end
+
+/--
+Verified compression of an arbitrary sum-of-products expression over
+`numOperands` `w`-bit operands, written in prefix notation:
+
+* `mul` — a binary multiply, followed by its two operand expressions;
+* `add<n>` — an `n`-ary addition (`n ≥ 2`), followed by its `n` operand
+  expressions;
+* `<index>.<live>` — a leaf: operand `index` whose low `live` bits are its
+  real bits, zero-extended to `w` bits.
+
+The whole expression becomes a *single* bit heap (`ArithCircuit.toBitHeap`
+merges the partial products of every multiply with the bits of every addend)
+and so a single compressor tree. For example
+`expr 16 3 add2 mul 0.8 1.8 2.8` is the fused multiply-add `a * b + c` over
+three operands with 8 live bits each — which `mul` followed by a separate
+`add` cannot express.
+
+`compressMul w a b` is `expr w 2 mul 0.a 1.b`, and `compressAdd w [w₀ … wₙ]`
+is `expr w (n+1) add<n+1> 0.w₀ … n.wₙ`.
+-/
+def compressExpr (w numOperands : Nat) (tokens : List String) :
+    Except String (Array String) := do
+  if w == 0 then
+    throw "width must be positive"
+  let (c, rest) ← parseExpr w numOperands tokens
+  unless rest.isEmpty do
+    throw ("trailing tokens after expression: " ++ " ".intercalate rest)
+  let header := s!"ok expr {w} {numOperands} " ++ " ".intercalate tokens
+  compressArith header (w := w) c
+
 end Netlist
 
 end BitHeap

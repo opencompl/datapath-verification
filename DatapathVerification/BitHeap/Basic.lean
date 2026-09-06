@@ -3,6 +3,7 @@ import DatapathVerification.BitHeap.BVComb
 import DatapathVerification.BitHeap.Chain
 import DatapathVerification.BitHeap.Column
 import DatapathVerification.BitHeap.Circuit
+import DatapathVerification.BitHeap.Netlist
 import DatapathVerification.BitHeap.Compressors.CompressionHelpers
 import DatapathVerification.BitHeap.Compressors.NaiveCompression
 import DatapathVerification.BitHeap.Compressors.DaddaTree
