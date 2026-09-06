@@ -155,20 +155,22 @@ def compressAdd (w : Nat) (widths : List Nat) : Except String (Array String) := 
     (w := w) (.add operands)
 
 /--
-Parse a leaf token `<index>.<live>` or `<index>.<live>s`: operand `index` (of
-`numOperands`) whose low `live` bits are its real bits and whose upper bits are
-constant `0` (zero extension) or copies of bit `live - 1` (sign extension).
+Parse a leaf token `<index>.<live>`: operand `index` (of `numOperands`) whose
+low `live` bits are its real bits and whose bits above them are constant `0`,
+so that the extension bits never enter the bit heap.
 -/
 private def parseLeaf (w numOperands : Nat) (s : String) :
     Except String (Comb.ArithCircuit w) :=
   match s.splitOn "." with
   | [iStr, liveStr] =>
-    let (liveStr, signed) :=
-      if liveStr.endsWith "s" then (liveStr.dropEnd 1, true) else (liveStr, false)
     match iStr.toNat?, liveStr.toNat? with
     | some i, some live =>
-      if i < numOperands then .ok (operandCircuit w i live signed)
-      else .error s!"leaf '{s}' addresses operand {i} of {numOperands}"
+      if i < numOperands then
+        let b := min live w
+        have hb : b ≤ w := Nat.min_le_right _ _
+        .ok (.zext i b hb)
+      else
+        .error s!"leaf '{s}' addresses operand {i} of {numOperands}"
     | _, _ => .error s!"malformed leaf token '{s}'"
   | _ => .error s!"malformed leaf token '{s}'"
 
@@ -213,8 +215,8 @@ Verified compression of an arbitrary sum-of-products expression over
 * `mul` — a binary multiply, followed by its two operand expressions;
 * `add<n>` — an `n`-ary addition (`n ≥ 2`), followed by its `n` operand
   expressions;
-* `<index>.<live>` / `<index>.<live>s` — a leaf: operand `index` with `live`
-  live low bits, zero- or sign-extended to `w` bits (see `operandCircuit`).
+* `<index>.<live>` — a leaf: operand `index` whose low `live` bits are its
+  real bits, zero-extended to `w` bits.
 
 The whole expression becomes a *single* bit heap (`ArithCircuit.toBitHeap`
 merges the partial products of every multiply with the bits of every addend)
@@ -223,8 +225,8 @@ and so a single compressor tree. For example
 three operands with 8 live bits each — which `mul` followed by a separate
 `add` cannot express.
 
-`compressMul w a b` is `expr w 2 mul 0.a 1.b`, and `compressAdd w [s₀ … sₙ]`
-is `expr w (n+1) add<n+1> 0.s₀ … n.sₙ`.
+`compressMul w a b` is `expr w 2 mul 0.a 1.b`, and `compressAdd w [w₀ … wₙ]`
+is `expr w (n+1) add<n+1> 0.w₀ … n.wₙ`.
 -/
 def compressExpr (w numOperands : Nat) (tokens : List String) :
     Except String (Array String) := do
