@@ -10,6 +10,14 @@ Usage:
 - `datapath-cli add <width> <numOperands> [<spec0> ... <specN-1>]` — compress
   a `<width>`-bit addition of `<numOperands>` operands with the given operand
   specs (defaulting to `<width>` live bits each).
+- `datapath-cli expr <width> <numOperands> <token> ...` — compress an
+  arbitrary sum-of-products expression over `<numOperands>` `<width>`-bit
+  operands into a *single* bit heap. Tokens are prefix notation: `mul`
+  (binary multiply, followed by its two operand expressions), `add<n>`
+  (`n`-ary addition, followed by its `n` operand expressions), and
+  `<index>.<spec>` (a leaf: operand `<index>` with the given spec). For
+  example `expr 16 3 add2 mul 0.8 1.8 2.8` is the fused multiply-add
+  `a * b + c`, which `mul` and `add` cannot express between them.
 
 An operand spec is `<live>` or `<live>s`: the operand's low `<live>` bits are
 its real bits, and the bits above them are constant 0 (`<live>`, zero
@@ -38,9 +46,11 @@ def parseSpec (s : String) : Option (Nat × Bool) :=
     (·, false) <$> s.toNat?
 
 def usage : IO UInt32 := do
-  IO.eprintln
-    "usage: datapath-cli mul <width> [<specA> <specB>] | add <width> <numOperands> [<spec0> ...]\n\
-     where a spec is <live> (zero-extended) or <live>s (sign-extended)"
+  IO.eprintln "usage: datapath-cli mul <width> [<specA> <specB>]"
+  IO.eprintln "       datapath-cli add <width> <numOperands> [<spec0> ...]"
+  IO.eprintln "       datapath-cli expr <width> <numOperands> <token> ..."
+  IO.eprintln "a spec is <live> (zero-extended) or <live>s (sign-extended); an expr token"
+  IO.eprintln "is 'mul', 'add<n>' or an '<index>.<spec>' leaf, in prefix notation"
   return 1
 
 def main (args : List String) : IO UInt32 := do
@@ -60,5 +70,8 @@ def main (args : List String) : IO UInt32 := do
           printResult (BitHeap.Netlist.compressAdd w specs)
         else usage
     | _, _, _ => usage
+  | "expr" :: wStr :: nStr :: tokens =>
+    match wStr.toNat?, nStr.toNat? with
+    | some w, some n => printResult (BitHeap.Netlist.compressExpr w n tokens)
+    | _, _ => usage
   | _ => usage
-
