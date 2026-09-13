@@ -127,6 +127,10 @@ set) another `2^(bits+k) - 2^bits` from the replicated sign bit occupying column
 def signFillNat (x : BitVec n) (bits k : Nat) : Nat :=
   x.toNat % 2 ^ bits + if x.getLsbD (bits - 1) then 2 ^ (bits + k) - 2 ^ bits else 0
 
+/--
+A sign-fill value fits in `w` bits whenever its topmost occupied column `bits + k` does:
+the low part is below `2^bits` and the sign contribution is capped by `2^(bits+k)`.
+-/
 theorem signFillNat_lt (x : BitVec n) (bits k w : Nat) (hbits : 0 < bits) (hk : bits + k ≤ w) :
     signFillNat x bits k < 2 ^ w := by
   simp only [signFillNat]
@@ -136,6 +140,10 @@ theorem signFillNat_lt (x : BitVec n) (bits k w : Nat) (hbits : 0 < bits) (hk : 
   set a := x.toNat % 2 ^ bits
   split <;> omega
 
+/--
+Adding one more sign-replicated column adds one copy of the sign bit at weight `2^(bits+k)`.
+This is the step lemma driving the induction in `bitheapOfVarSext_go`.
+-/
 theorem signFillNat_succ (x : BitVec n) (bits k : Nat) (hbits : 0 < bits) :
     signFillNat x bits (k + 1)
       = signFillNat x bits k + 2 ^ (bits + k) * (x.getLsbD (bits - 1)).toNat := by
